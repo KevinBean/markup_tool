@@ -326,7 +326,15 @@
             medium: { label: 'Medium', color: '#f59e0b' }, // Amber
             high: { label: 'High', color: '#ef4444' }      // Red
         };
-        
+
+        // Info Point Marker Styles - what's displayed inside the circle
+        const INFO_MARKER_STYLES = {
+            number: { label: 'Number', description: '1, 2, 3...' },
+            letter: { label: 'Letter', description: 'A, B, C...' },
+            icon: { label: 'Icon', description: 'ⓘ info symbol' },
+            none: { label: 'None', description: 'Empty circle' }
+        };
+
         // ============================================
         // UTILITY FUNCTIONS
         // ============================================
@@ -1033,9 +1041,23 @@
                             <div className="flex items-center gap-2 p-2 bg-[#1a1a1a] rounded-lg">
                                 <div
                                     className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                                    style={{ backgroundColor: (INFO_CATEGORIES[selection.category] || INFO_CATEGORIES.general).color }}
+                                    style={{
+                                        backgroundColor: (INFO_CATEGORIES[selection.category] || INFO_CATEGORIES.general).color,
+                                        fontStyle: selection.markerStyle === 'icon' ? 'italic' : 'normal'
+                                    }}
                                 >
-                                    {selection.number || 1}
+                                    {(() => {
+                                        const style = selection.markerStyle || 'number';
+                                        if (style === 'number') return selection.number || 1;
+                                        if (style === 'letter') {
+                                            let n = selection.number || 1;
+                                            let letter = '';
+                                            while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
+                                            return letter;
+                                        }
+                                        if (style === 'icon') return 'i';
+                                        return '';
+                                    })()}
                                 </div>
                                 <div className="flex-1">
                                     <div className="text-sm font-medium text-white">{selection.label || 'Untitled Point'}</div>
@@ -1117,6 +1139,42 @@
                                             {label}
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+
+                            {/* Marker Style - what's displayed inside the circle */}
+                            <div className="space-y-2">
+                                <div className="text-xs text-gray-500">Marker Style</div>
+                                <div className="flex gap-1">
+                                    {Object.entries(INFO_MARKER_STYLES).map(([key, { label, description }]) => {
+                                        const isActive = (selection.markerStyle || 'number') === key;
+                                        // Display preview based on style
+                                        let preview = '';
+                                        if (key === 'number') preview = String(selection.number || 1);
+                                        else if (key === 'letter') {
+                                            let n = selection.number || 1;
+                                            let letter = '';
+                                            while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
+                                            preview = letter;
+                                        }
+                                        else if (key === 'icon') preview = 'i';
+                                        else preview = '-';
+                                        return (
+                                            <button
+                                                key={key}
+                                                onClick={() => onUpdate({ markerStyle: key })}
+                                                className={`flex-1 py-1.5 px-1 text-xs rounded transition-all flex flex-col items-center gap-0.5 ${
+                                                    isActive
+                                                        ? 'bg-accent text-white ring-2 ring-white/30'
+                                                        : 'bg-[#2a2a2a] text-gray-300 hover:bg-[#3a3a3a]'
+                                                }`}
+                                                title={description}
+                                            >
+                                                <span className="font-bold text-sm" style={{ fontStyle: key === 'icon' ? 'italic' : 'normal' }}>{preview}</span>
+                                                <span className="text-[10px] opacity-70">{label}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -2310,6 +2368,7 @@
                                 tags: [],
                                 color: INFO_CATEGORIES.general.color,
                                 radius: 12,
+                                markerStyle: 'number',
                                 visible: true,
                                 locked: false
                             };
@@ -3419,6 +3478,26 @@
                                                 const displayNumber = point.number || 1;
                                                 const fontSize = radius < 10 ? 9 : radius < 14 ? 11 : 13;
 
+                                                // Compute marker text based on markerStyle
+                                                const markerStyle = point.markerStyle || 'number';
+                                                let markerText = '';
+                                                if (markerStyle === 'number') {
+                                                    markerText = String(displayNumber);
+                                                } else if (markerStyle === 'letter') {
+                                                    // Convert number to letter: 1=A, 2=B, ... 26=Z, 27=AA, etc.
+                                                    let n = displayNumber;
+                                                    let letter = '';
+                                                    while (n > 0) {
+                                                        n--;
+                                                        letter = String.fromCharCode(65 + (n % 26)) + letter;
+                                                        n = Math.floor(n / 26);
+                                                    }
+                                                    markerText = letter;
+                                                } else if (markerStyle === 'icon') {
+                                                    markerText = 'i';
+                                                }
+                                                // 'none' keeps markerText empty
+
                                                 return (
                                                     <g key={point.id} style={{ cursor: currentTool === OPERATIONS.SELECT ? 'pointer' : 'default' }}>
                                                         {/* Drop shadow */}
@@ -3476,19 +3555,22 @@
                                                             style={{ pointerEvents: 'none' }}
                                                         />
 
-                                                        {/* Number text */}
-                                                        <text
-                                                            x={point.x}
-                                                            y={point.y + fontSize * 0.35}
-                                                            textAnchor="middle"
-                                                            fill="#ffffff"
-                                                            fontSize={fontSize}
-                                                            fontWeight="bold"
-                                                            fontFamily="Arial, sans-serif"
-                                                            style={{ pointerEvents: 'none' }}
-                                                        >
-                                                            {displayNumber}
-                                                        </text>
+                                                        {/* Marker text (number, letter, icon, or none) */}
+                                                        {markerText && (
+                                                            <text
+                                                                x={point.x}
+                                                                y={point.y + fontSize * 0.35}
+                                                                textAnchor="middle"
+                                                                fill="#ffffff"
+                                                                fontSize={markerStyle === 'icon' ? fontSize + 2 : fontSize}
+                                                                fontWeight="bold"
+                                                                fontFamily={markerStyle === 'icon' ? 'Georgia, serif' : 'Arial, sans-serif'}
+                                                                fontStyle={markerStyle === 'icon' ? 'italic' : 'normal'}
+                                                                style={{ pointerEvents: 'none' }}
+                                                            >
+                                                                {markerText}
+                                                            </text>
+                                                        )}
 
                                                         {/* Label with dark background pill */}
                                                         {point.label && (
