@@ -286,7 +286,10 @@
             TEXT: 'text',
             DIMENSION: 'dimension',
             INFO_POINT: 'info_point',
-            PAN: 'pan'
+            PAN: 'pan',
+            CALIBRATE: 'calibrate',
+            MEASURE: 'measure',
+            SYMBOL: 'symbol'
         };
         
         const LAYERS = {
@@ -333,6 +336,372 @@
             letter: { label: 'Letter', description: 'A, B, C...' },
             icon: { label: 'Icon', description: 'ⓘ info symbol' },
             none: { label: 'None', description: 'Empty circle' }
+        };
+
+        // ============================================
+        // HV CABLE SYMBOL LIBRARY
+        // ============================================
+
+        const HV_SYMBOL_CATEGORIES = {
+            joints: { label: 'Joints', color: '#ef4444' },
+            terminations: { label: 'Terminations', color: '#f59e0b' },
+            accessories: { label: 'Accessories', color: '#22c55e' },
+            cable: { label: 'Cable Elements', color: '#0ea5e9' },
+            schematic: { label: 'Schematic', color: '#8b5cf6' }
+        };
+
+        const HV_SYMBOLS = {
+            // Joints
+            'joint-straight': {
+                id: 'joint-straight',
+                name: 'Straight Joint',
+                category: 'joints',
+                width: 60,
+                height: 30,
+                render: (ctx, x, y, w, h, rotation) => {
+                    ctx.save();
+                    ctx.translate(x + w/2, y + h/2);
+                    ctx.rotate(rotation * Math.PI / 180);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(-w/2, -h/4, w, h/2);
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(-w/2, -h/4, w, h/2);
+                    ctx.beginPath();
+                    ctx.moveTo(-w/4, -h/4);
+                    ctx.lineTo(-w/4, h/4);
+                    ctx.moveTo(w/4, -h/4);
+                    ctx.lineTo(w/4, h/4);
+                    ctx.stroke();
+                    ctx.restore();
+                },
+                svg: `<rect x="0" y="7.5" width="60" height="15" fill="#ef4444" stroke="#000" stroke-width="2"/><line x1="15" y1="7.5" x2="15" y2="22.5" stroke="#000" stroke-width="2"/><line x1="45" y1="7.5" x2="45" y2="22.5" stroke="#000" stroke-width="2"/>`
+            },
+            'joint-transition': {
+                id: 'joint-transition',
+                name: 'Transition Joint',
+                category: 'joints',
+                width: 70,
+                height: 30,
+                svg: `<polygon points="0,10 20,5 50,5 70,10 70,20 50,25 20,25 0,20" fill="#ef4444" stroke="#000" stroke-width="2"/><line x1="20" y1="5" x2="20" y2="25" stroke="#000" stroke-width="1.5"/><line x1="50" y1="5" x2="50" y2="25" stroke="#000" stroke-width="1.5"/>`
+            },
+            'joint-stop': {
+                id: 'joint-stop',
+                name: 'Stop Joint',
+                category: 'joints',
+                width: 50,
+                height: 40,
+                svg: `<rect x="5" y="5" width="40" height="30" fill="#ef4444" stroke="#000" stroke-width="2"/><line x1="5" y1="20" x2="0" y2="20" stroke="#000" stroke-width="3"/><circle cx="25" cy="20" r="8" fill="none" stroke="#000" stroke-width="2"/>`
+            },
+            'joint-flexible': {
+                id: 'joint-flexible',
+                name: 'Flexible Joint',
+                category: 'joints',
+                width: 80,
+                height: 30,
+                svg: `<path d="M0,15 Q20,5 40,15 Q60,25 80,15" fill="none" stroke="#ef4444" stroke-width="8"/><path d="M0,15 Q20,5 40,15 Q60,25 80,15" fill="none" stroke="#000" stroke-width="2"/>`
+            },
+
+            // Terminations
+            'term-outdoor': {
+                id: 'term-outdoor',
+                name: 'Outdoor Termination',
+                category: 'terminations',
+                width: 30,
+                height: 60,
+                svg: `<rect x="5" y="30" width="20" height="30" fill="#f59e0b" stroke="#000" stroke-width="2"/><path d="M15,30 L5,10 L15,0 L25,10 Z" fill="#f59e0b" stroke="#000" stroke-width="2"/><line x1="15" y1="60" x2="15" y2="70" stroke="#000" stroke-width="3"/>`
+            },
+            'term-gis': {
+                id: 'term-gis',
+                name: 'GIS Termination',
+                category: 'terminations',
+                width: 40,
+                height: 50,
+                svg: `<rect x="5" y="10" width="30" height="40" rx="5" fill="#f59e0b" stroke="#000" stroke-width="2"/><circle cx="20" cy="30" r="10" fill="none" stroke="#000" stroke-width="2"/><line x1="20" y1="0" x2="20" y2="10" stroke="#000" stroke-width="3"/>`
+            },
+            'term-transformer': {
+                id: 'term-transformer',
+                name: 'Transformer Termination',
+                category: 'terminations',
+                width: 50,
+                height: 50,
+                svg: `<circle cx="25" cy="20" r="15" fill="none" stroke="#000" stroke-width="2"/><circle cx="25" cy="35" r="15" fill="none" stroke="#000" stroke-width="2"/><rect x="10" y="0" width="30" height="10" fill="#f59e0b" stroke="#000" stroke-width="2"/>`
+            },
+            'term-indoor': {
+                id: 'term-indoor',
+                name: 'Indoor Termination',
+                category: 'terminations',
+                width: 30,
+                height: 50,
+                svg: `<rect x="5" y="20" width="20" height="30" fill="#f59e0b" stroke="#000" stroke-width="2"/><ellipse cx="15" cy="10" rx="10" ry="10" fill="#f59e0b" stroke="#000" stroke-width="2"/><line x1="15" y1="50" x2="15" y2="60" stroke="#000" stroke-width="3"/>`
+            },
+
+            // Accessories
+            'link-box': {
+                id: 'link-box',
+                name: 'Link Box',
+                category: 'accessories',
+                width: 50,
+                height: 40,
+                svg: `<rect x="5" y="5" width="40" height="30" fill="#22c55e" stroke="#000" stroke-width="2"/><text x="25" y="25" text-anchor="middle" font-size="12" font-weight="bold">LB</text>`
+            },
+            'svl': {
+                id: 'svl',
+                name: 'Sheath Voltage Limiter',
+                category: 'accessories',
+                width: 40,
+                height: 40,
+                svg: `<rect x="5" y="5" width="30" height="30" fill="#22c55e" stroke="#000" stroke-width="2"/><path d="M12,20 L20,10 L20,30 L28,20" fill="none" stroke="#000" stroke-width="2"/>`
+            },
+            'cross-bond-box': {
+                id: 'cross-bond-box',
+                name: 'Cross-bonding Box',
+                category: 'accessories',
+                width: 60,
+                height: 40,
+                svg: `<rect x="5" y="5" width="50" height="30" fill="#22c55e" stroke="#000" stroke-width="2"/><line x1="15" y1="10" x2="45" y2="30" stroke="#000" stroke-width="2"/><line x1="15" y1="30" x2="45" y2="10" stroke="#000" stroke-width="2"/><text x="30" y="38" text-anchor="middle" font-size="8">CB</text>`
+            },
+            'earth-point': {
+                id: 'earth-point',
+                name: 'Earth Point',
+                category: 'accessories',
+                width: 30,
+                height: 40,
+                svg: `<line x1="15" y1="0" x2="15" y2="15" stroke="#000" stroke-width="2"/><line x1="5" y1="15" x2="25" y2="15" stroke="#000" stroke-width="3"/><line x1="8" y1="22" x2="22" y2="22" stroke="#000" stroke-width="2.5"/><line x1="11" y1="29" x2="19" y2="29" stroke="#000" stroke-width="2"/>`
+            },
+            'ct': {
+                id: 'ct',
+                name: 'Current Transformer',
+                category: 'accessories',
+                width: 40,
+                height: 40,
+                svg: `<circle cx="20" cy="20" r="15" fill="none" stroke="#000" stroke-width="2"/><circle cx="20" cy="20" r="10" fill="none" stroke="#000" stroke-width="2"/><text x="20" y="24" text-anchor="middle" font-size="10" font-weight="bold">CT</text>`
+            },
+            'surge-arrester': {
+                id: 'surge-arrester',
+                name: 'Surge Arrester',
+                category: 'accessories',
+                width: 30,
+                height: 50,
+                svg: `<rect x="8" y="5" width="14" height="35" fill="#22c55e" stroke="#000" stroke-width="2"/><line x1="15" y1="0" x2="15" y2="5" stroke="#000" stroke-width="3"/><line x1="5" y1="45" x2="25" y2="45" stroke="#000" stroke-width="3"/><line x1="8" y1="50" x2="22" y2="50" stroke="#000" stroke-width="2"/>`
+            },
+
+            // Cable Elements
+            'cable-single': {
+                id: 'cable-single',
+                name: 'Single-core Cable',
+                category: 'cable',
+                width: 20,
+                height: 60,
+                svg: `<line x1="10" y1="0" x2="10" y2="60" stroke="#0ea5e9" stroke-width="8"/><line x1="10" y1="0" x2="10" y2="60" stroke="#000" stroke-width="1"/>`
+            },
+            'cable-three': {
+                id: 'cable-three',
+                name: 'Three-core Cable',
+                category: 'cable',
+                width: 40,
+                height: 60,
+                svg: `<line x1="10" y1="0" x2="10" y2="60" stroke="#ef4444" stroke-width="6"/><line x1="20" y1="0" x2="20" y2="60" stroke="#f59e0b" stroke-width="6"/><line x1="30" y1="0" x2="30" y2="60" stroke="#0ea5e9" stroke-width="6"/><ellipse cx="20" cy="30" rx="18" ry="8" fill="none" stroke="#000" stroke-width="1.5" stroke-dasharray="4,2"/>`
+            },
+            'duct': {
+                id: 'duct',
+                name: 'Cable Duct',
+                category: 'cable',
+                width: 60,
+                height: 30,
+                svg: `<rect x="0" y="5" width="60" height="20" fill="none" stroke="#666" stroke-width="2"/><circle cx="15" cy="15" r="6" fill="#0ea5e9" stroke="#000" stroke-width="1"/><circle cx="30" cy="15" r="6" fill="#0ea5e9" stroke="#000" stroke-width="1"/><circle cx="45" cy="15" r="6" fill="#0ea5e9" stroke="#000" stroke-width="1"/>`
+            },
+            'trough': {
+                id: 'trough',
+                name: 'Cable Trough',
+                category: 'cable',
+                width: 70,
+                height: 30,
+                svg: `<path d="M0,5 L10,25 L60,25 L70,5" fill="none" stroke="#666" stroke-width="2"/><line x1="0" y1="5" x2="70" y2="5" stroke="#666" stroke-width="2"/><circle cx="25" cy="15" r="5" fill="#0ea5e9"/><circle cx="45" cy="15" r="5" fill="#0ea5e9"/>`
+            },
+            'manhole': {
+                id: 'manhole',
+                name: 'Manhole/Chamber',
+                category: 'cable',
+                width: 50,
+                height: 50,
+                svg: `<rect x="5" y="5" width="40" height="40" fill="#444" stroke="#000" stroke-width="2"/><rect x="15" y="0" width="20" height="10" fill="#666" stroke="#000" stroke-width="1"/><text x="25" y="32" text-anchor="middle" font-size="10" fill="#fff">MH</text>`
+            },
+            'cable-marker': {
+                id: 'cable-marker',
+                name: 'Cable Route Marker',
+                category: 'cable',
+                width: 20,
+                height: 40,
+                svg: `<rect x="5" y="20" width="10" height="20" fill="#f59e0b" stroke="#000" stroke-width="1"/><polygon points="10,0 0,20 20,20" fill="#f59e0b" stroke="#000" stroke-width="1"/>`
+            },
+
+            // Schematic Symbols
+            'ground': {
+                id: 'ground',
+                name: 'Ground Symbol',
+                category: 'schematic',
+                width: 30,
+                height: 30,
+                svg: `<line x1="15" y1="0" x2="15" y2="10" stroke="#000" stroke-width="2"/><line x1="5" y1="10" x2="25" y2="10" stroke="#000" stroke-width="3"/><line x1="8" y1="16" x2="22" y2="16" stroke="#000" stroke-width="2.5"/><line x1="11" y1="22" x2="19" y2="22" stroke="#000" stroke-width="2"/><line x1="14" y1="28" x2="16" y2="28" stroke="#000" stroke-width="1.5"/>`
+            },
+            'phase-r': {
+                id: 'phase-r',
+                name: 'Phase R (Red)',
+                category: 'schematic',
+                width: 30,
+                height: 30,
+                svg: `<circle cx="15" cy="15" r="12" fill="#ef4444" stroke="#000" stroke-width="2"/><text x="15" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">R</text>`
+            },
+            'phase-y': {
+                id: 'phase-y',
+                name: 'Phase Y (Yellow)',
+                category: 'schematic',
+                width: 30,
+                height: 30,
+                svg: `<circle cx="15" cy="15" r="12" fill="#f59e0b" stroke="#000" stroke-width="2"/><text x="15" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#000">Y</text>`
+            },
+            'phase-b': {
+                id: 'phase-b',
+                name: 'Phase B (Blue)',
+                category: 'schematic',
+                width: 30,
+                height: 30,
+                svg: `<circle cx="15" cy="15" r="12" fill="#0ea5e9" stroke="#000" stroke-width="2"/><text x="15" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">B</text>`
+            },
+            'neutral': {
+                id: 'neutral',
+                name: 'Neutral',
+                category: 'schematic',
+                width: 30,
+                height: 30,
+                svg: `<circle cx="15" cy="15" r="12" fill="#64748b" stroke="#000" stroke-width="2"/><text x="15" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">N</text>`
+            },
+            'test-point': {
+                id: 'test-point',
+                name: 'Test Point',
+                category: 'schematic',
+                width: 30,
+                height: 30,
+                svg: `<circle cx="15" cy="15" r="10" fill="none" stroke="#8b5cf6" stroke-width="2"/><circle cx="15" cy="15" r="4" fill="#8b5cf6"/><text x="15" y="28" text-anchor="middle" font-size="8">TP</text>`
+            },
+            'disconnect': {
+                id: 'disconnect',
+                name: 'Disconnect Point',
+                category: 'schematic',
+                width: 40,
+                height: 20,
+                svg: `<line x1="0" y1="10" x2="15" y2="10" stroke="#000" stroke-width="2"/><line x1="25" y1="10" x2="40" y2="10" stroke="#000" stroke-width="2"/><circle cx="15" cy="10" r="4" fill="none" stroke="#000" stroke-width="2"/><circle cx="25" cy="10" r="4" fill="none" stroke="#000" stroke-width="2"/>`
+            },
+            'splice': {
+                id: 'splice',
+                name: 'Cable Splice',
+                category: 'schematic',
+                width: 40,
+                height: 20,
+                svg: `<line x1="0" y1="10" x2="40" y2="10" stroke="#000" stroke-width="3"/><ellipse cx="20" cy="10" rx="10" ry="6" fill="#ef4444" stroke="#000" stroke-width="1.5"/>`
+            }
+        };
+
+        // ============================================
+        // CABLE SPECIFICATION SYSTEM
+        // ============================================
+
+        const CABLE_SPEC_FIELDS = {
+            electrical: {
+                label: 'Electrical',
+                fields: {
+                    voltageClass: { label: 'Voltage Class', type: 'select', options: ['11kV', '33kV', '66kV', '110kV', '132kV', '220kV', '275kV', '330kV', '400kV', '500kV'] },
+                    conductorSize: { label: 'Conductor Size (mm²)', type: 'select', options: ['95', '120', '150', '185', '240', '300', '400', '500', '630', '800', '1000', '1200', '1400', '1600', '2000', '2500'] },
+                    conductorMaterial: { label: 'Conductor Material', type: 'select', options: ['Cu', 'Al'] }
+                }
+            },
+            insulation: {
+                label: 'Insulation',
+                fields: {
+                    insulationType: { label: 'Insulation Type', type: 'select', options: ['XLPE', 'EPR', 'PILC', 'PPL'] },
+                    sheathType: { label: 'Sheath Type', type: 'select', options: ['Lead', 'Aluminium', 'Copper Wire Screen', 'Corrugated Al', 'None'] }
+                }
+            },
+            physical: {
+                label: 'Physical',
+                fields: {
+                    cores: { label: 'Number of Cores', type: 'select', options: ['1', '3'] },
+                    outerDiameter: { label: 'Outer Diameter (mm)', type: 'number' },
+                    weight: { label: 'Weight (kg/m)', type: 'number' },
+                    bendingRadius: { label: 'Min Bending Radius (mm)', type: 'number' }
+                }
+            },
+            installation: {
+                label: 'Installation',
+                fields: {
+                    installationType: { label: 'Installation Type', type: 'select', options: ['Direct Buried', 'Duct', 'Trough', 'Tunnel', 'Bridge', 'Submarine'] },
+                    depth: { label: 'Depth (m)', type: 'number' }
+                }
+            }
+        };
+
+        const CABLE_TEMPLATES = {
+            '132kV-1000Cu': {
+                name: '132kV 1000mm² Cu XLPE',
+                voltageClass: '132kV',
+                conductorSize: '1000',
+                conductorMaterial: 'Cu',
+                insulationType: 'XLPE',
+                sheathType: 'Copper Wire Screen',
+                cores: '1',
+                outerDiameter: 95,
+                weight: 12.5,
+                bendingRadius: 1900
+            },
+            '220kV-1600Cu': {
+                name: '220kV 1600mm² Cu XLPE',
+                voltageClass: '220kV',
+                conductorSize: '1600',
+                conductorMaterial: 'Cu',
+                insulationType: 'XLPE',
+                sheathType: 'Copper Wire Screen',
+                cores: '1',
+                outerDiameter: 115,
+                weight: 18.2,
+                bendingRadius: 2300
+            },
+            '400kV-2500Cu': {
+                name: '400kV 2500mm² Cu XLPE',
+                voltageClass: '400kV',
+                conductorSize: '2500',
+                conductorMaterial: 'Cu',
+                insulationType: 'XLPE',
+                sheathType: 'Copper Wire Screen',
+                cores: '1',
+                outerDiameter: 140,
+                weight: 28.5,
+                bendingRadius: 2800
+            },
+            '33kV-300Al': {
+                name: '33kV 300mm² Al XLPE 3-core',
+                voltageClass: '33kV',
+                conductorSize: '300',
+                conductorMaterial: 'Al',
+                insulationType: 'XLPE',
+                sheathType: 'Aluminium',
+                cores: '3',
+                outerDiameter: 75,
+                weight: 8.5,
+                bendingRadius: 750
+            },
+            '11kV-185Al': {
+                name: '11kV 185mm² Al XLPE 3-core',
+                voltageClass: '11kV',
+                conductorSize: '185',
+                conductorMaterial: 'Al',
+                insulationType: 'XLPE',
+                sheathType: 'Aluminium',
+                cores: '3',
+                outerDiameter: 55,
+                weight: 4.2,
+                bendingRadius: 550
+            }
         };
 
         // ============================================
@@ -675,6 +1044,57 @@
                     <circle cx="4" cy="18" r="1" fill="currentColor"/>
                 </svg>
             ),
+            Calibrate: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="8" x2="3" y2="16"/>
+                    <line x1="21" y1="8" x2="21" y2="16"/>
+                    <line x1="8" y1="10" x2="8" y2="14"/>
+                    <line x1="12" y1="9" x2="12" y2="15"/>
+                    <line x1="16" y1="10" x2="16" y2="14"/>
+                    <text x="12" y="21" textAnchor="middle" fontSize="6" fill="currentColor" stroke="none">m</text>
+                </svg>
+            ),
+            Measure: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="4" y1="20" x2="20" y2="4"/>
+                    <line x1="4" y1="20" x2="7" y2="17"/>
+                    <line x1="20" y1="4" x2="17" y2="7"/>
+                    <line x1="4" y1="17" x2="4" y2="20"/>
+                    <line x1="4" y1="20" x2="7" y2="20"/>
+                    <line x1="17" y1="4" x2="20" y2="4"/>
+                    <line x1="20" y1="4" x2="20" y2="7"/>
+                    <text x="12" y="15" textAnchor="middle" fontSize="6" fill="currentColor" stroke="none">25m</text>
+                </svg>
+            ),
+            Component: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="4" y="8" width="16" height="8" rx="1"/>
+                    <line x1="8" y1="8" x2="8" y2="16"/>
+                    <line x1="16" y1="8" x2="16" y2="16"/>
+                    <line x1="0" y1="12" x2="4" y2="12"/>
+                    <line x1="20" y1="12" x2="24" y2="12"/>
+                </svg>
+            ),
+            ChevronDown: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            ),
+            Settings: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            ),
+            Library: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    <line x1="12" y1="6" x2="12" y2="12"/>
+                    <line x1="9" y1="9" x2="15" y2="9"/>
+                </svg>
+            ),
         };
         
         // ============================================
@@ -893,6 +1313,8 @@
 
             const isInfoPoint = selection.type === 'info_point';
             const isLine = selection.type === 'line';
+            const isSymbol = selection.type === 'symbol';
+            const isMeasurement = selection.type === 'measurement';
 
             return (
                 <div className="p-4 space-y-4">
@@ -1253,8 +1675,132 @@
                         </>
                     )}
 
-                    {/* Style - for non-info-point elements */}
-                    {!isInfoPoint && (
+                    {/* Symbol-specific fields */}
+                    {isSymbol && (
+                        <>
+                            <div className="space-y-2 pt-2 border-t border-panel-border">
+                                <div className="text-xs text-gray-500">Symbol Info</div>
+                                <div className="p-2 bg-[#1a1a1a] rounded">
+                                    <div className="text-sm text-white">{HV_SYMBOLS[selection.symbolId]?.name || selection.symbolId}</div>
+                                    <div className="text-xs text-gray-500">{HV_SYMBOLS[selection.symbolId]?.category || 'Unknown'}</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="text-xs text-gray-500">Transform</div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-16">Rotation</label>
+                                    <input
+                                        type="number"
+                                        value={selection.rotation || 0}
+                                        onChange={(e) => onUpdate({ rotation: parseFloat(e.target.value) })}
+                                        className="w-16"
+                                        step="15"
+                                    />
+                                    <span className="text-xs text-gray-400">°</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-16">Scale</label>
+                                    <input
+                                        type="number"
+                                        value={selection.scale || 1}
+                                        onChange={(e) => onUpdate({ scale: parseFloat(e.target.value) })}
+                                        className="w-16"
+                                        step="0.1"
+                                        min="0.5"
+                                        max="3"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Symbol Specs (for joints, terminations, etc.) */}
+                            <div className="space-y-2 pt-2 border-t border-panel-border">
+                                <div className="text-xs text-gray-500">Specifications</div>
+                                {['jointId', 'circuit', 'phase', 'chainage', 'manufacturer', 'status'].map(field => (
+                                    <div key={field} className="flex items-center gap-2">
+                                        <label className="text-xs text-gray-400 w-20 capitalize">{field.replace(/([A-Z])/g, ' $1').trim()}</label>
+                                        <input
+                                            type="text"
+                                            value={selection.specs?.[field] || ''}
+                                            onChange={(e) => onUpdate({ specs: { ...selection.specs, [field]: e.target.value } })}
+                                            className="flex-1"
+                                            placeholder={field}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+
+                    {/* Measurement-specific fields */}
+                    {isMeasurement && (
+                        <>
+                            <div className="space-y-2 pt-2 border-t border-panel-border">
+                                <div className="text-xs text-gray-500">Distance</div>
+                                <div className="p-3 bg-[#1a1a1a] rounded space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs text-gray-400">Pixels</span>
+                                        <span className="text-sm text-white font-mono">{selection.pixelDistance?.toFixed(1) || 0} px</span>
+                                    </div>
+                                    {selection.realDistance !== null && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-gray-400">Real</span>
+                                            <span className="text-sm text-green-400 font-mono font-bold">
+                                                {selection.realDistance?.toFixed(2)} {selection.unit === 'meters' ? 'm' : 'ft'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="text-xs text-gray-500">Endpoints</div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-xs text-gray-400">X1</label>
+                                        <input
+                                            type="number"
+                                            value={Math.round(selection.x1 || 0)}
+                                            onChange={(e) => onUpdate({ x1: parseFloat(e.target.value) })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-400">Y1</label>
+                                        <input
+                                            type="number"
+                                            value={Math.round(selection.y1 || 0)}
+                                            onChange={(e) => onUpdate({ y1: parseFloat(e.target.value) })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-xs text-gray-400">X2</label>
+                                        <input
+                                            type="number"
+                                            value={Math.round(selection.x2 || 0)}
+                                            onChange={(e) => onUpdate({ x2: parseFloat(e.target.value) })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-400">Y2</label>
+                                        <input
+                                            type="number"
+                                            value={Math.round(selection.y2 || 0)}
+                                            onChange={(e) => onUpdate({ y2: parseFloat(e.target.value) })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Style - for non-info-point, non-symbol, non-measurement elements */}
+                    {!isInfoPoint && !isSymbol && !isMeasurement && (
                         <div className="space-y-2 pt-2 border-t border-panel-border">
                             <div className="text-xs text-gray-500">Style</div>
                             <div className="flex items-center gap-2">
@@ -1297,7 +1843,7 @@
         // LAYER PANEL COMPONENT
         // ============================================
         
-        const LayerPanel = ({ snippets, masks, elements, infoPoints, onSelectItem, selectedId, onDeleteItem, onToggleVisibility }) => {
+        const LayerPanel = ({ snippets, masks, elements, infoPoints, symbols = [], measurements = [], onSelectItem, selectedId, onDeleteItem, onToggleVisibility }) => {
             const renderItem = (item, type) => (
                 <div
                     key={item.id}
@@ -1365,6 +1911,32 @@
                             {elements.map(e => renderItem(e, 'element'))}
                         </div>
                     </div>
+
+                    {/* Symbols */}
+                    {symbols.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                                <div className="w-4 h-4"><Icons.Component /></div>
+                                <span>Symbols ({symbols.length})</span>
+                            </div>
+                            <div className="space-y-1">
+                                {symbols.map(s => renderItem(s, 'symbol'))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Measurements */}
+                    {measurements.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                                <div className="w-4 h-4"><Icons.Measure /></div>
+                                <span>Measurements ({measurements.length})</span>
+                            </div>
+                            <div className="space-y-1">
+                                {measurements.map(m => renderItem(m, 'measurement'))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Info Points */}
                     <div>
@@ -1977,6 +2549,172 @@
         };
 
         // ============================================
+        // CALIBRATION DIALOG COMPONENT
+        // ============================================
+
+        const CalibrationDialog = ({ isOpen, onClose, onConfirm, calibrationPoints }) => {
+            const [knownDistance, setKnownDistance] = useState('');
+            const [unit, setUnit] = useState('meters');
+
+            if (!isOpen) return null;
+
+            const pixelDist = calibrationPoints.length === 2
+                ? Math.round(distance(calibrationPoints[0], calibrationPoints[1]))
+                : 0;
+
+            const handleConfirm = () => {
+                const dist = parseFloat(knownDistance);
+                if (dist > 0) {
+                    onConfirm(dist, unit);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
+                    <div className="bg-panel-bg rounded-xl shadow-2xl w-96 p-6" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 text-accent"><Icons.Calibrate /></div>
+                            <h2 className="text-lg font-semibold text-white">Scale Calibration</h2>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="text-sm text-gray-400">
+                                You've selected two points that are <span className="text-white font-mono">{pixelDist}px</span> apart.
+                            </div>
+
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Known Distance</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="number"
+                                        value={knownDistance}
+                                        onChange={(e) => setKnownDistance(e.target.value)}
+                                        placeholder="Enter distance"
+                                        className="flex-1"
+                                        autoFocus
+                                    />
+                                    <select
+                                        value={unit}
+                                        onChange={(e) => setUnit(e.target.value)}
+                                        className="w-24"
+                                    >
+                                        <option value="meters">meters</option>
+                                        <option value="feet">feet</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="text-xs text-gray-500">
+                                This will set the scale for all measurements on this drawing.
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 mt-6">
+                            <button onClick={onClose} className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirm}
+                                disabled={!knownDistance || parseFloat(knownDistance) <= 0}
+                                className="flex-1 px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Calibrate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // SYMBOL LIBRARY PANEL COMPONENT
+        // ============================================
+
+        const SymbolLibraryPanel = ({ selectedSymbolId, onSelectSymbol, symbolCategory, onSetCategory }) => {
+            const categories = [
+                { id: 'all', label: 'All' },
+                ...Object.entries(HV_SYMBOL_CATEGORIES).map(([id, cat]) => ({ id, label: cat.label }))
+            ];
+
+            const filteredSymbols = symbolCategory === 'all'
+                ? Object.values(HV_SYMBOLS)
+                : Object.values(HV_SYMBOLS).filter(s => s.category === symbolCategory);
+
+            return (
+                <div className="flex flex-col h-full">
+                    {/* Category Filter */}
+                    <div className="p-2 border-b border-panel-border">
+                        <div className="flex flex-wrap gap-1">
+                            {categories.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => onSetCategory(cat.id)}
+                                    className={`px-2 py-1 text-xs rounded ${
+                                        symbolCategory === cat.id
+                                            ? 'bg-accent text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                    }`}
+                                >
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Symbol Grid */}
+                    <div className="flex-1 overflow-y-auto p-2">
+                        <div className="grid grid-cols-2 gap-2">
+                            {filteredSymbols.map(symbol => {
+                                const catColor = HV_SYMBOL_CATEGORIES[symbol.category]?.color || '#666';
+                                const catLabel = HV_SYMBOL_CATEGORIES[symbol.category]?.label || symbol.category;
+                                return (
+                                    <div
+                                        key={symbol.id}
+                                        onClick={() => onSelectSymbol(symbol.id)}
+                                        className={`
+                                            p-2 rounded-lg cursor-pointer border-2 transition-all
+                                            ${selectedSymbolId === symbol.id
+                                                ? 'border-accent bg-accent/20'
+                                                : 'border-transparent bg-gray-800/50 hover:bg-gray-700'}
+                                        `}
+                                        title={symbol.name}
+                                    >
+                                        <div className="flex items-center justify-center h-14 bg-white/5 rounded mb-2">
+                                            <svg
+                                                width={Math.min(symbol.width, 55)}
+                                                height={Math.min(symbol.height, 45)}
+                                                viewBox={`0 0 ${symbol.width} ${symbol.height}`}
+                                                dangerouslySetInnerHTML={{ __html: symbol.svg }}
+                                            />
+                                        </div>
+                                        <div className="text-xs text-white truncate font-medium">{symbol.name}</div>
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <div
+                                                className="w-2 h-2 rounded-full"
+                                                style={{ backgroundColor: catColor }}
+                                            />
+                                            <span className="text-[10px] text-gray-500">{catLabel}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Selected Symbol Info */}
+                    {selectedSymbolId && HV_SYMBOLS[selectedSymbolId] && (
+                        <div className="p-3 border-t border-panel-border bg-[#1a1a1a]">
+                            <div className="text-sm text-white font-medium">{HV_SYMBOLS[selectedSymbolId].name}</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                                Click on canvas to place • Press ESC to cancel
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // ============================================
         // SNIPPET LIBRARY COMPONENT
         // ============================================
 
@@ -2112,6 +2850,23 @@
             const [masks, setMasks] = useState([]);
             const [elements, setElements] = useState([]);
             const [infoPoints, setInfoPoints] = useState([]);
+            const [symbols, setSymbols] = useState([]);
+            const [measurements, setMeasurements] = useState([]);
+            const [cableAnnotations, setCableAnnotations] = useState([]);
+
+            // Scale Calibration State
+            const [scaleCalibration, setScaleCalibration] = useState({
+                isCalibrated: false,
+                pixelsPerMeter: null,
+                unit: 'meters',
+                calibrationPoints: null
+            });
+            const [calibrationStep, setCalibrationStep] = useState(0); // 0: not started, 1: first point, 2: second point
+            const [calibrationPoints, setCalibrationPoints] = useState([]);
+
+            // Symbol Placement State
+            const [selectedSymbolId, setSelectedSymbolId] = useState(null);
+            const [symbolCategory, setSymbolCategory] = useState('all');
 
             // Snippet Library
             const [snippetLibrary, setSnippetLibrary] = useState(() => {
@@ -2122,7 +2877,20 @@
             // UI State
             const [showGrid, setShowGrid] = useState(true);
             const [styles, setStyles] = useState({ ...DEFAULT_STYLES });
-            const [leftPanelTab, setLeftPanelTab] = useState('tools'); // 'tools' | 'layers' | 'library' | 'data'
+            const [leftPanelTab, setLeftPanelTab] = useState('tools'); // 'tools' | 'layers' | 'library' | 'symbols' | 'data'
+            const [showCalibrationDialog, setShowCalibrationDialog] = useState(false);
+            const [showExportMenu, setShowExportMenu] = useState(false);
+
+            // Close export menu when clicking outside
+            useEffect(() => {
+                const handleClickOutside = () => {
+                    if (showExportMenu) setShowExportMenu(false);
+                };
+                if (showExportMenu) {
+                    document.addEventListener('click', handleClickOutside);
+                    return () => document.removeEventListener('click', handleClickOutside);
+                }
+            }, [showExportMenu]);
             const [showInfoSummary, setShowInfoSummary] = useState(false);
 
             // Refs
@@ -2132,7 +2900,7 @@
             const exportCanvasRef = useRef(null);
             
             // History
-            const history = useHistory({ snippets: [], masks: [], elements: [], infoPoints: [] });
+            const history = useHistory({ snippets: [], masks: [], elements: [], infoPoints: [], symbols: [], measurements: [], cableAnnotations: [] });
             
             // ============================================
             // COMPUTED VALUES
@@ -2149,8 +2917,10 @@
                 if (selectedType === 'mask') return masks.find(m => m.id === selectedId);
                 if (selectedType === 'element') return elements.find(e => e.id === selectedId);
                 if (selectedType === 'infoPoint') return infoPoints.find(p => p.id === selectedId);
+                if (selectedType === 'symbol') return symbols.find(s => s.id === selectedId);
+                if (selectedType === 'measurement') return measurements.find(m => m.id === selectedId);
                 return null;
-            }, [selectedId, selectedType, snippets, masks, elements, infoPoints]);
+            }, [selectedId, selectedType, snippets, masks, elements, infoPoints, symbols, measurements]);
             
             // ============================================
             // COORDINATE TRANSFORMATION
@@ -2307,6 +3077,16 @@
                                 p.visible !== false && distance(coords, { x: p.x, y: p.y }) <= 15
                             );
 
+                            // Check symbols
+                            const clickedSymbol = symbols.find(s =>
+                                s.visible !== false && pointInRect(coords, { x: s.x, y: s.y, width: s.width * (s.scale || 1), height: s.height * (s.scale || 1) })
+                            );
+
+                            // Check measurements
+                            const clickedMeasurement = measurements.find(m =>
+                                m.visible !== false && pointToLineDistance(coords, m.x1, m.y1, m.x2, m.y2) <= 10
+                            );
+
                             // Check elements (rectangles, circles, lines)
                             const clickedElement = elements.find(el => {
                                 if (el.visible === false) return false;
@@ -2327,6 +3107,18 @@
                                 setSelectedType('infoPoint');
                                 setIsDragging(true);
                                 setDragStart({ x: coords.x - clickedInfoPoint.x, y: coords.y - clickedInfoPoint.y });
+                            } else if (clickedSymbol) {
+                                setSelectedId(clickedSymbol.id);
+                                setSelectedType('symbol');
+                                setIsDragging(true);
+                                setDragStart({ x: coords.x - clickedSymbol.x, y: coords.y - clickedSymbol.y });
+                            } else if (clickedMeasurement) {
+                                setSelectedId(clickedMeasurement.id);
+                                setSelectedType('measurement');
+                                setIsDragging(true);
+                                const midX = (clickedMeasurement.x1 + clickedMeasurement.x2) / 2;
+                                const midY = (clickedMeasurement.y1 + clickedMeasurement.y2) / 2;
+                                setDragStart({ x: coords.x - midX, y: coords.y - midY });
                             } else if (clickedElement) {
                                 setSelectedId(clickedElement.id);
                                 setSelectedType('element');
@@ -2381,7 +3173,53 @@
                             setInfoPoints(prev => [...prev, newInfoPoint]);
                             setSelectedId(newInfoPoint.id);
                             setSelectedType('infoPoint');
-                            history.push({ snippets, masks, elements, infoPoints: [...infoPoints, newInfoPoint] });
+                            history.push({ snippets, masks, elements, infoPoints: [...infoPoints, newInfoPoint], symbols, measurements, cableAnnotations });
+                            break;
+
+                        case OPERATIONS.CALIBRATE:
+                            // Calibration: click two points, then enter known distance
+                            if (calibrationStep === 0) {
+                                setCalibrationPoints([coords]);
+                                setCalibrationStep(1);
+                            } else if (calibrationStep === 1) {
+                                setCalibrationPoints(prev => [...prev, coords]);
+                                setCalibrationStep(2);
+                                // Show dialog to enter known distance
+                                setShowCalibrationDialog(true);
+                            }
+                            break;
+
+                        case OPERATIONS.MEASURE:
+                            // Measurement: draw lines between two points
+                            setIsDrawing(true);
+                            setDrawStart(coords);
+                            setDrawEnd(coords);
+                            break;
+
+                        case OPERATIONS.SYMBOL:
+                            // Symbol placement: place selected symbol at click location
+                            if (selectedSymbolId && HV_SYMBOLS[selectedSymbolId]) {
+                                const symbolDef = HV_SYMBOLS[selectedSymbolId];
+                                const newSymbol = {
+                                    id: generateId(),
+                                    type: 'symbol',
+                                    symbolId: selectedSymbolId,
+                                    name: symbolDef.name,
+                                    x: coords.x - symbolDef.width / 2,
+                                    y: coords.y - symbolDef.height / 2,
+                                    width: symbolDef.width,
+                                    height: symbolDef.height,
+                                    rotation: 0,
+                                    scale: 1.0,
+                                    specs: {},
+                                    visible: true,
+                                    locked: false
+                                };
+                                setSymbols(prev => [...prev, newSymbol]);
+                                setSelectedId(newSymbol.id);
+                                setSelectedType('symbol');
+                                history.push({ snippets, masks, elements, infoPoints, symbols: [...symbols, newSymbol], measurements, cableAnnotations });
+                            }
                             break;
 
                         case OPERATIONS.SNIPPET:
@@ -2395,7 +3233,7 @@
                             break;
                     }
                 }
-            }, [currentTool, screenToCanvas, panOffset, snippets, masks, infoPoints, elements, styles, history]);
+            }, [currentTool, screenToCanvas, panOffset, snippets, masks, infoPoints, elements, symbols, measurements, cableAnnotations, styles, history, calibrationStep, selectedSymbolId]);
             
             const handleMouseMove = useCallback((e) => {
                 const coords = screenToCanvas(e.clientX, e.clientY);
@@ -2420,6 +3258,25 @@
                     if (selectedType === 'snippet') updatePosition(snippets, setSnippets);
                     if (selectedType === 'mask') updatePosition(masks, setMasks);
                     if (selectedType === 'infoPoint') updatePosition(infoPoints, setInfoPoints);
+                    if (selectedType === 'symbol') updatePosition(symbols, setSymbols);
+                    if (selectedType === 'measurement') {
+                        setMeasurements(measurements.map(m => {
+                            if (m.id !== selectedId) return m;
+                            const midX = (m.x1 + m.x2) / 2;
+                            const midY = (m.y1 + m.y2) / 2;
+                            const newMidX = coords.x - dragStart.x;
+                            const newMidY = coords.y - dragStart.y;
+                            const dx = newMidX - midX;
+                            const dy = newMidY - midY;
+                            return {
+                                ...m,
+                                x1: m.x1 + dx,
+                                y1: m.y1 + dy,
+                                x2: m.x2 + dx,
+                                y2: m.y2 + dy
+                            };
+                        }));
+                    }
                     if (selectedType === 'element') {
                         setElements(elements.map(el => {
                             if (el.id !== selectedId) return el;
@@ -2449,7 +3306,7 @@
                 if (isDrawing) {
                     setDrawEnd(coords);
                 }
-            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints, elements]);
+            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints, elements, symbols, measurements]);
             
             const handleMouseUp = useCallback((e) => {
                 const coords = screenToCanvas(e.clientX, e.clientY);
@@ -2462,7 +3319,7 @@
                 if (isDragging) {
                     setIsDragging(false);
                     // Save to history
-                    history.push({ snippets: [...snippets], masks: [...masks], elements: [...elements], infoPoints: [...infoPoints] });
+                    history.push({ snippets: [...snippets], masks: [...masks], elements: [...elements], infoPoints: [...infoPoints], symbols: [...symbols], measurements: [...measurements], cableAnnotations: [...cableAnnotations] });
                     return;
                 }
                 
@@ -2518,7 +3375,10 @@
                                             snippets: [...snippets, newSnippet],
                                             masks: [...masks, newMask],
                                             elements,
-                                            infoPoints
+                                            infoPoints,
+                                            symbols,
+                                            measurements,
+                                            cableAnnotations
                                         });
                                     });
                                 }
@@ -2538,7 +3398,7 @@
                                     locked: false
                                 };
                                 setMasks(prev => [...prev, newMask]);
-                                history.push({ snippets, masks: [...masks, newMask], elements, infoPoints });
+                                history.push({ snippets, masks: [...masks, newMask], elements, infoPoints, symbols, measurements, cableAnnotations });
                                 break;
                                 
                             case OPERATIONS.RECTANGLE:
@@ -2557,7 +3417,7 @@
                                     locked: false
                                 };
                                 setElements(prev => [...prev, newRect]);
-                                history.push({ snippets, masks, elements: [...elements, newRect], infoPoints });
+                                history.push({ snippets, masks, elements: [...elements, newRect], infoPoints, symbols, measurements, cableAnnotations });
                                 break;
                                 
                             case OPERATIONS.CIRCLE:
@@ -2576,7 +3436,7 @@
                                     locked: false
                                 };
                                 setElements(prev => [...prev, newCircle]);
-                                history.push({ snippets, masks, elements: [...elements, newCircle], infoPoints });
+                                history.push({ snippets, masks, elements: [...elements, newCircle], infoPoints, symbols, measurements, cableAnnotations });
                                 break;
                                 
                             case OPERATIONS.LINE:
@@ -2594,7 +3454,34 @@
                                     locked: false
                                 };
                                 setElements(prev => [...prev, newLine]);
-                                history.push({ snippets, masks, elements: [...elements, newLine], infoPoints });
+                                history.push({ snippets, masks, elements: [...elements, newLine], infoPoints, symbols, measurements, cableAnnotations });
+                                break;
+
+                            case OPERATIONS.MEASURE:
+                                // Calculate distance in pixels
+                                const pixelDist = distance(drawStart, coords);
+                                // Calculate real-world distance if calibrated
+                                const realDistance = scaleCalibration.isCalibrated
+                                    ? pixelDist / scaleCalibration.pixelsPerMeter
+                                    : null;
+                                const newMeasurement = {
+                                    id: generateId(),
+                                    type: 'measurement',
+                                    name: `Measurement ${measurements.length + 1}`,
+                                    x1: drawStart.x,
+                                    y1: drawStart.y,
+                                    x2: coords.x,
+                                    y2: coords.y,
+                                    pixelDistance: pixelDist,
+                                    realDistance: realDistance,
+                                    unit: scaleCalibration.unit,
+                                    visible: true,
+                                    locked: false
+                                };
+                                setMeasurements(prev => [...prev, newMeasurement]);
+                                setSelectedId(newMeasurement.id);
+                                setSelectedType('measurement');
+                                history.push({ snippets, masks, elements, infoPoints, symbols, measurements: [...measurements, newMeasurement], cableAnnotations });
                                 break;
                         }
                     }
@@ -2603,7 +3490,7 @@
                     setDrawStart(null);
                     setDrawEnd(null);
                 }
-            }, [isPanning, isDragging, isDrawing, drawStart, currentTool, currentPageData, snippets, masks, elements, infoPoints, styles, screenToCanvas, history]);
+            }, [isPanning, isDragging, isDrawing, drawStart, currentTool, currentPageData, snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations, styles, screenToCanvas, history, scaleCalibration]);
             
             // ============================================
             // KEYBOARD SHORTCUTS
@@ -2625,10 +3512,14 @@
                                 if (!e.ctrlKey) setCurrentTool(OPERATIONS.CIRCLE);
                                 break;
                             case 'i': setCurrentTool(OPERATIONS.INFO_POINT); break;
+                            case 'd': setCurrentTool(OPERATIONS.MEASURE); break;
+                            case 'p': setCurrentTool(OPERATIONS.SYMBOL); break;
                             case 'escape':
                                 setSelectedId(null);
                                 setSelectedType(null);
                                 setIsDrawing(false);
+                                setCalibrationStep(0);
+                                setCalibrationPoints([]);
                                 break;
                             case 'delete':
                             case 'backspace':
@@ -2641,6 +3532,10 @@
                                         setElements(prev => prev.filter(e => e.id !== selectedId));
                                     } else if (selectedType === 'infoPoint') {
                                         setInfoPoints(prev => prev.filter(p => p.id !== selectedId));
+                                    } else if (selectedType === 'symbol') {
+                                        setSymbols(prev => prev.filter(s => s.id !== selectedId));
+                                    } else if (selectedType === 'measurement') {
+                                        setMeasurements(prev => prev.filter(m => m.id !== selectedId));
                                     }
                                     setSelectedId(null);
                                     setSelectedType(null);
@@ -2667,6 +3562,9 @@
                                         setMasks(state.masks);
                                         setElements(state.elements);
                                         setInfoPoints(state.infoPoints || []);
+                                        setSymbols(state.symbols || []);
+                                        setMeasurements(state.measurements || []);
+                                        setCableAnnotations(state.cableAnnotations || []);
                                     }
                                 } else {
                                     if (history.canUndo) {
@@ -2676,6 +3574,9 @@
                                         setMasks(state.masks);
                                         setElements(state.elements);
                                         setInfoPoints(state.infoPoints || []);
+                                        setSymbols(state.symbols || []);
+                                        setMeasurements(state.measurements || []);
+                                        setCableAnnotations(state.cableAnnotations || []);
                                     }
                                 }
                                 e.preventDefault();
@@ -2688,6 +3589,9 @@
                                     setMasks(state.masks);
                                     setElements(state.elements);
                                     setInfoPoints(state.infoPoints || []);
+                                    setSymbols(state.symbols || []);
+                                    setMeasurements(state.measurements || []);
+                                    setCableAnnotations(state.cableAnnotations || []);
                                 }
                                 e.preventDefault();
                                 break;
@@ -2785,15 +3689,146 @@
                 await exportToPDF({ current: canvas }, `${pdfData?.fileName || 'markup'}-export.pdf`);
             };
             
+            // Export functions for HV cable data
+            const handleExportJointRegister = () => {
+                // Find all joint symbols
+                const joints = symbols.filter(s => HV_SYMBOLS[s.symbolId]?.category === 'joints');
+                const headers = ['Joint ID', 'Type', 'Circuit', 'Phase', 'Chainage', 'Cable In', 'Cable Out', 'Manufacturer', 'Status', 'X', 'Y'];
+                const rows = joints.map((joint, idx) => {
+                    const symbolDef = HV_SYMBOLS[joint.symbolId];
+                    return [
+                        joint.specs?.jointId || `J${idx + 1}`,
+                        symbolDef?.name || joint.symbolId,
+                        joint.specs?.circuit || '',
+                        joint.specs?.phase || '',
+                        joint.specs?.chainage || '',
+                        joint.specs?.cableIn || '',
+                        joint.specs?.cableOut || '',
+                        joint.specs?.manufacturer || '',
+                        joint.specs?.status || 'Installed',
+                        Math.round(joint.x),
+                        Math.round(joint.y)
+                    ];
+                });
+                const csvContent = [
+                    headers.join(','),
+                    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                ].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'joint-register.csv';
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const handleExportCableSchedule = () => {
+                // Export cable annotations
+                const headers = ['Cable ID', 'Circuit', 'From', 'To', 'Voltage', 'Conductor Size', 'Material', 'Insulation', 'Length', 'Installation'];
+                const rows = cableAnnotations.map((cable, idx) => [
+                    cable.specs?.cableId || `C${idx + 1}`,
+                    cable.specs?.circuit || '',
+                    cable.specs?.from || '',
+                    cable.specs?.to || '',
+                    cable.specs?.voltageClass || '',
+                    cable.specs?.conductorSize || '',
+                    cable.specs?.conductorMaterial || '',
+                    cable.specs?.insulationType || '',
+                    cable.specs?.length || '',
+                    cable.specs?.installationType || ''
+                ]);
+                const csvContent = [
+                    headers.join(','),
+                    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                ].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'cable-schedule.csv';
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const handleExportTestPoints = () => {
+                // Find test point symbols and info points tagged as test points
+                const testPointSymbols = symbols.filter(s => s.symbolId === 'test-point');
+                const testPointInfos = infoPoints.filter(p => p.tags?.includes('test-point') || p.category === 'test');
+                const headers = ['TP ID', 'Location', 'Type', 'Circuit', 'Phase', 'X', 'Y', 'Last Test', 'Status'];
+                const rows = [
+                    ...testPointSymbols.map((tp, idx) => [
+                        tp.specs?.tpId || `TP${idx + 1}`,
+                        tp.specs?.location || '',
+                        'Symbol',
+                        tp.specs?.circuit || '',
+                        tp.specs?.phase || '',
+                        Math.round(tp.x),
+                        Math.round(tp.y),
+                        tp.specs?.lastTest || '',
+                        tp.specs?.status || 'Active'
+                    ]),
+                    ...testPointInfos.map((tp, idx) => [
+                        tp.metadata?.tpId || `TP-I${idx + 1}`,
+                        tp.label || tp.name || '',
+                        'Info Point',
+                        tp.metadata?.circuit || '',
+                        tp.metadata?.phase || '',
+                        Math.round(tp.x),
+                        Math.round(tp.y),
+                        tp.metadata?.lastTest || '',
+                        tp.metadata?.status || 'Active'
+                    ])
+                ];
+                const csvContent = [
+                    headers.join(','),
+                    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                ].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'test-points.csv';
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const handleExportMeasurements = () => {
+                const headers = ['Measurement ID', 'Name', 'Distance (px)', 'Distance (Real)', 'Unit', 'X1', 'Y1', 'X2', 'Y2'];
+                const rows = measurements.map((m, idx) => [
+                    m.id.slice(-6),
+                    m.name || `M${idx + 1}`,
+                    m.pixelDistance.toFixed(1),
+                    m.realDistance !== null ? m.realDistance.toFixed(2) : 'N/A',
+                    m.unit || 'px',
+                    Math.round(m.x1),
+                    Math.round(m.y1),
+                    Math.round(m.x2),
+                    Math.round(m.y2)
+                ]);
+                const csvContent = [
+                    headers.join(','),
+                    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                ].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'measurements.csv';
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
             const handleSaveProject = () => {
                 const project = {
                     meta: {
-                        version: '1.1',
+                        version: '2.0',
                         created: new Date().toISOString(),
                         name: pdfData?.fileName || 'Untitled Project'
                     },
                     settings: {
-                        styles: styles
+                        styles: styles,
+                        scaleCalibration: scaleCalibration
                     },
                     pages: pdfData ? [{
                         pageNumber: currentPage,
@@ -2803,7 +3838,10 @@
                         snippets: snippets,
                         masks: masks,
                         elements: elements,
-                        infoPoints: infoPoints
+                        infoPoints: infoPoints,
+                        symbols: symbols,
+                        measurements: measurements,
+                        cableAnnotations: cableAnnotations
                     }] : []
                 };
 
@@ -2841,7 +3879,14 @@
                         setMasks(page.masks || []);
                         setElements(page.elements || []);
                         setInfoPoints(page.infoPoints || []);
+                        setSymbols(page.symbols || []);
+                        setMeasurements(page.measurements || []);
+                        setCableAnnotations(page.cableAnnotations || []);
                         setStyles(project.settings?.styles || DEFAULT_STYLES);
+                        // Load scale calibration if available
+                        if (project.settings?.scaleCalibration) {
+                            setScaleCalibration(project.settings.scaleCalibration);
+                        }
                         setCurrentPage(0);
                         setTimeout(() => fitToView(), 100);
                     }
@@ -2865,6 +3910,8 @@
                 if (type === 'mask') setMasks(prev => prev.filter(m => m.id !== id));
                 if (type === 'element') setElements(prev => prev.filter(e => e.id !== id));
                 if (type === 'infoPoint') setInfoPoints(prev => prev.filter(p => p.id !== id));
+                if (type === 'symbol') setSymbols(prev => prev.filter(s => s.id !== id));
+                if (type === 'measurement') setMeasurements(prev => prev.filter(m => m.id !== id));
 
                 if (selectedId === id) {
                     setSelectedId(null);
@@ -2883,6 +3930,8 @@
                 if (type === 'mask') updateVisibility(masks, setMasks);
                 if (type === 'element') updateVisibility(elements, setElements);
                 if (type === 'infoPoint') updateVisibility(infoPoints, setInfoPoints);
+                if (type === 'symbol') updateVisibility(symbols, setSymbols);
+                if (type === 'measurement') updateVisibility(measurements, setMeasurements);
             };
 
             const handleUpdateSelected = (updates) => {
@@ -2896,7 +3945,35 @@
                     setElements(prev => prev.map(e => e.id === selectedId ? { ...e, ...updates } : e));
                 } else if (selectedType === 'infoPoint') {
                     setInfoPoints(prev => prev.map(p => p.id === selectedId ? { ...p, ...updates } : p));
+                } else if (selectedType === 'symbol') {
+                    setSymbols(prev => prev.map(s => s.id === selectedId ? { ...s, ...updates } : s));
+                } else if (selectedType === 'measurement') {
+                    setMeasurements(prev => prev.map(m => m.id === selectedId ? { ...m, ...updates } : m));
                 }
+            };
+
+            // Calibration handler
+            const handleCalibrationComplete = (knownDistance, unit) => {
+                if (calibrationPoints.length === 2) {
+                    const pixelDist = distance(calibrationPoints[0], calibrationPoints[1]);
+                    const pixelsPerMeter = unit === 'meters' ? pixelDist / knownDistance : pixelDist / (knownDistance * 0.3048);
+                    setScaleCalibration({
+                        isCalibrated: true,
+                        pixelsPerMeter: pixelsPerMeter,
+                        unit: unit,
+                        calibrationPoints: calibrationPoints
+                    });
+                    // Recalculate all existing measurements
+                    setMeasurements(prev => prev.map(m => ({
+                        ...m,
+                        realDistance: m.pixelDistance / pixelsPerMeter,
+                        unit: unit
+                    })));
+                }
+                setShowCalibrationDialog(false);
+                setCalibrationStep(0);
+                setCalibrationPoints([]);
+                setCurrentTool(OPERATIONS.SELECT);
             };
 
             // ============================================
@@ -2920,7 +3997,7 @@
                 delete newSnippet.libraryName;
                 delete newSnippet.savedAt;
                 setSnippets(prev => [...prev, newSnippet]);
-                history.push({ snippets: [...snippets, newSnippet], masks, elements, infoPoints });
+                history.push({ snippets: [...snippets, newSnippet], masks, elements, infoPoints, symbols, measurements, cableAnnotations });
             };
 
             const handleDeleteFromLibrary = (index) => {
@@ -2998,6 +4075,10 @@
                                         setSnippets(state.snippets);
                                         setMasks(state.masks);
                                         setElements(state.elements);
+                                        setInfoPoints(state.infoPoints || []);
+                                        setSymbols(state.symbols || []);
+                                        setMeasurements(state.measurements || []);
+                                        setCableAnnotations(state.cableAnnotations || []);
                                     }
                                 }}
                                 disabled={!history.canUndo}
@@ -3013,6 +4094,10 @@
                                         setSnippets(state.snippets);
                                         setMasks(state.masks);
                                         setElements(state.elements);
+                                        setInfoPoints(state.infoPoints || []);
+                                        setSymbols(state.symbols || []);
+                                        setMeasurements(state.measurements || []);
+                                        setCableAnnotations(state.cableAnnotations || []);
                                     }
                                 }}
                                 disabled={!history.canRedo}
@@ -3023,57 +4108,111 @@
                         
                         <div className="flex-1" />
                         
-                        {/* Export */}
-                        <div className="flex items-center gap-2">
+                        {/* Export Dropdown */}
+                        <div className="relative">
                             <button
                                 className="px-3 py-1.5 text-sm bg-accent text-white hover:bg-accent-hover rounded flex items-center gap-2"
-                                onClick={handleExportPDF}
+                                onClick={() => setShowExportMenu(!showExportMenu)}
                                 disabled={!pdfData}
                             >
                                 <div className="w-4 h-4"><Icons.Download /></div>
-                                Export PDF
+                                Export
+                                <div className="w-3 h-3"><Icons.ChevronDown /></div>
                             </button>
+                            {showExportMenu && (
+                                <div className="absolute right-0 top-full mt-1 bg-panel-bg rounded-lg shadow-xl border border-panel-border py-1 z-50 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex items-center gap-2"
+                                        onClick={() => { handleExportPDF(); setShowExportMenu(false); }}
+                                    >
+                                        <span className="text-accent">PDF</span>
+                                        Export as PDF
+                                    </button>
+                                    <div className="border-t border-panel-border my-1" />
+                                    <div className="px-4 py-1 text-xs text-gray-500 uppercase">HV Cable Data</div>
+                                    <button
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700"
+                                        onClick={() => { handleExportJointRegister(); setShowExportMenu(false); }}
+                                    >
+                                        Joint Register (CSV)
+                                    </button>
+                                    <button
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700"
+                                        onClick={() => { handleExportCableSchedule(); setShowExportMenu(false); }}
+                                    >
+                                        Cable Schedule (CSV)
+                                    </button>
+                                    <button
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700"
+                                        onClick={() => { handleExportTestPoints(); setShowExportMenu(false); }}
+                                    >
+                                        Test Point List (CSV)
+                                    </button>
+                                    <button
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700"
+                                        onClick={() => { handleExportMeasurements(); setShowExportMenu(false); }}
+                                    >
+                                        Measurements (CSV)
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </header>
                     
                     {/* Main Content */}
                     <div className="flex-1 flex overflow-hidden">
                         {/* Left Panel - Tools */}
-                        <aside className="w-56 bg-panel-bg border-r border-panel-border flex flex-col">
-                            {/* Panel Tabs */}
-                            <div className="flex border-b border-panel-border">
+                        <aside className="w-64 bg-panel-bg border-r border-panel-border flex flex-col">
+                            {/* Panel Tabs - Icon style */}
+                            <div className="flex items-center border-b border-panel-border bg-[#1a1a1a]">
                                 <button
-                                    className={`flex-1 py-2 text-sm ${leftPanelTab === 'tools' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}
+                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'tools' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
                                     onClick={() => setLeftPanelTab('tools')}
+                                    title="Tools"
                                 >
-                                    Tools
+                                    <div className="w-4 h-4"><Icons.Settings /></div>
+                                    <span className="text-[10px]">Tools</span>
                                 </button>
                                 <button
-                                    className={`flex-1 py-2 text-sm ${leftPanelTab === 'layers' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}
+                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'symbols' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
+                                    onClick={() => setLeftPanelTab('symbols')}
+                                    title="HV Symbols"
+                                >
+                                    <div className="w-4 h-4"><Icons.Component /></div>
+                                    <span className="text-[10px]">Symbols</span>
+                                </button>
+                                <button
+                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'layers' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
                                     onClick={() => setLeftPanelTab('layers')}
+                                    title="Layers"
                                 >
-                                    Layers
+                                    <div className="w-4 h-4"><Icons.Layers /></div>
+                                    <span className="text-[10px]">Layers</span>
                                 </button>
                                 <button
-                                    className={`flex-1 py-2 text-sm ${leftPanelTab === 'library' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}
+                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'library' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
                                     onClick={() => setLeftPanelTab('library')}
+                                    title="Snippet Library"
                                 >
-                                    Library
+                                    <div className="w-4 h-4"><Icons.Library /></div>
+                                    <span className="text-[10px]">Library</span>
                                 </button>
                                 <button
-                                    className={`flex-1 py-2 text-sm ${leftPanelTab === 'data' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}
+                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'data' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
                                     onClick={() => setLeftPanelTab('data')}
+                                    title="Data View"
                                 >
-                                    Data
+                                    <div className="w-4 h-4"><Icons.List /></div>
+                                    <span className="text-[10px]">Data</span>
                                 </button>
                             </div>
                             
                             {leftPanelTab === 'tools' ? (
-                                <div className="p-3 space-y-4 overflow-y-auto">
-                                    {/* Selection Tools */}
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Selection</div>
-                                        <div className="grid grid-cols-4 gap-1">
+                                <div className="flex-1 overflow-y-auto">
+                                    {/* Selection & Navigation */}
+                                    <div className="p-3 border-b border-panel-border">
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Selection</div>
+                                        <div className="grid grid-cols-5 gap-1">
                                             <ToolButton
                                                 icon={Icons.Cursor}
                                                 label="Select"
@@ -3081,34 +4220,19 @@
                                                 active={currentTool === OPERATIONS.SELECT}
                                                 onClick={() => setCurrentTool(OPERATIONS.SELECT)}
                                             />
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Markup Tools */}
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Markup</div>
-                                        <div className="grid grid-cols-4 gap-1">
                                             <ToolButton
-                                                icon={Icons.Scissors}
-                                                label="Snippet"
-                                                shortcut="S"
-                                                active={currentTool === OPERATIONS.SNIPPET}
-                                                onClick={() => setCurrentTool(OPERATIONS.SNIPPET)}
-                                            />
-                                            <ToolButton
-                                                icon={Icons.Mask}
-                                                label="Mask"
-                                                shortcut="M"
-                                                active={currentTool === OPERATIONS.MASK}
-                                                onClick={() => setCurrentTool(OPERATIONS.MASK)}
+                                                icon={Icons.Move}
+                                                label="Pan"
+                                                active={currentTool === OPERATIONS.PAN}
+                                                onClick={() => setCurrentTool(OPERATIONS.PAN)}
                                             />
                                         </div>
                                     </div>
-                                    
-                                    {/* Shape Tools */}
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Shapes</div>
-                                        <div className="grid grid-cols-4 gap-1">
+
+                                    {/* Drawing Tools */}
+                                    <div className="p-3 border-b border-panel-border">
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Drawing</div>
+                                        <div className="grid grid-cols-5 gap-1">
                                             <ToolButton
                                                 icon={Icons.Line}
                                                 label="Line"
@@ -3131,39 +4255,42 @@
                                                 onClick={() => setCurrentTool(OPERATIONS.CIRCLE)}
                                             />
                                             <ToolButton
-                                                icon={Icons.Arrow}
-                                                label="Arrow"
-                                                shortcut="A"
-                                                active={currentTool === OPERATIONS.ARROW}
-                                                onClick={() => setCurrentTool(OPERATIONS.ARROW)}
+                                                icon={Icons.Scissors}
+                                                label="Snippet"
+                                                shortcut="S"
+                                                active={currentTool === OPERATIONS.SNIPPET}
+                                                onClick={() => setCurrentTool(OPERATIONS.SNIPPET)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Mask}
+                                                label="Mask"
+                                                shortcut="M"
+                                                active={currentTool === OPERATIONS.MASK}
+                                                onClick={() => setCurrentTool(OPERATIONS.MASK)}
                                             />
                                         </div>
                                     </div>
-                                    
+
                                     {/* Annotation Tools */}
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Annotation</div>
-                                        <div className="grid grid-cols-4 gap-1">
-                                            <ToolButton
-                                                icon={Icons.Type}
-                                                label="Text"
-                                                shortcut="T"
-                                                active={currentTool === OPERATIONS.TEXT}
-                                                onClick={() => setCurrentTool(OPERATIONS.TEXT)}
-                                            />
-                                            <ToolButton
-                                                icon={Icons.Ruler}
-                                                label="Dimension"
-                                                shortcut="D"
-                                                active={currentTool === OPERATIONS.DIMENSION}
-                                                onClick={() => setCurrentTool(OPERATIONS.DIMENSION)}
-                                            />
+                                    <div className="p-3 border-b border-panel-border">
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Annotation</div>
+                                        <div className="grid grid-cols-5 gap-1">
                                             <ToolButton
                                                 icon={Icons.InfoPoint}
                                                 label="Info Point"
                                                 shortcut="I"
                                                 active={currentTool === OPERATIONS.INFO_POINT}
                                                 onClick={() => setCurrentTool(OPERATIONS.INFO_POINT)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Component}
+                                                label="Symbol"
+                                                shortcut="P"
+                                                active={currentTool === OPERATIONS.SYMBOL}
+                                                onClick={() => {
+                                                    setCurrentTool(OPERATIONS.SYMBOL);
+                                                    setLeftPanelTab('symbols');
+                                                }}
                                             />
                                             <ToolButton
                                                 icon={Icons.List}
@@ -3173,10 +4300,51 @@
                                         </div>
                                     </div>
 
+                                    {/* Measurement Tools */}
+                                    <div className="p-3 border-b border-panel-border">
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Measurement</div>
+                                        <div className="grid grid-cols-5 gap-1">
+                                            <ToolButton
+                                                icon={Icons.Calibrate}
+                                                label="Calibrate"
+                                                active={currentTool === OPERATIONS.CALIBRATE}
+                                                onClick={() => {
+                                                    setCurrentTool(OPERATIONS.CALIBRATE);
+                                                    setCalibrationStep(0);
+                                                    setCalibrationPoints([]);
+                                                }}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Measure}
+                                                label="Measure"
+                                                shortcut="D"
+                                                active={currentTool === OPERATIONS.MEASURE}
+                                                onClick={() => setCurrentTool(OPERATIONS.MEASURE)}
+                                            />
+                                        </div>
+                                        {/* Calibration Status */}
+                                        {scaleCalibration.isCalibrated ? (
+                                            <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded text-xs text-green-400 flex items-center gap-2">
+                                                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                                Scale: {scaleCalibration.pixelsPerMeter.toFixed(1)} px/{scaleCalibration.unit === 'meters' ? 'm' : 'ft'}
+                                            </div>
+                                        ) : (
+                                            <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-500">
+                                                Not calibrated - click Calibrate to set scale
+                                            </div>
+                                        )}
+                                        {currentTool === OPERATIONS.CALIBRATE && (
+                                            <div className="mt-2 p-2 bg-accent/10 border border-accent/30 rounded text-xs text-accent">
+                                                {calibrationStep === 0 && "Click first point on a known distance..."}
+                                                {calibrationStep === 1 && "Click second point..."}
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* View Controls */}
-                                    <div className="pt-2 border-t border-panel-border">
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">View</div>
-                                        <div className="grid grid-cols-4 gap-1">
+                                    <div className="p-3 border-b border-panel-border">
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">View</div>
+                                        <div className="grid grid-cols-5 gap-1">
                                             <ToolButton
                                                 icon={Icons.ZoomIn}
                                                 label="Zoom In"
@@ -3201,11 +4369,11 @@
                                             />
                                         </div>
                                     </div>
-                                    
+
                                     {/* Style Settings */}
-                                    <div className="pt-2 border-t border-panel-border">
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Style</div>
-                                        <div className="space-y-2 px-1">
+                                    <div className="p-3">
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Style</div>
+                                        <div className="space-y-2">
                                             <div className="flex items-center gap-2">
                                                 <label className="text-xs text-gray-400 w-14">Stroke</label>
                                                 <input
@@ -3217,7 +4385,7 @@
                                                     type="number"
                                                     value={styles.strokeWidth}
                                                     onChange={(e) => setStyles(prev => ({ ...prev, strokeWidth: parseFloat(e.target.value) }))}
-                                                    className="w-12"
+                                                    className="w-14"
                                                     min="1"
                                                     max="20"
                                                 />
@@ -3240,6 +4408,16 @@
                                         </div>
                                     </div>
                                 </div>
+                            ) : leftPanelTab === 'symbols' ? (
+                                <SymbolLibraryPanel
+                                    selectedSymbolId={selectedSymbolId}
+                                    onSelectSymbol={(id) => {
+                                        setSelectedSymbolId(id);
+                                        setCurrentTool(OPERATIONS.SYMBOL);
+                                    }}
+                                    symbolCategory={symbolCategory}
+                                    onSetCategory={setSymbolCategory}
+                                />
                             ) : leftPanelTab === 'layers' ? (
                                 <div className="flex-1 overflow-y-auto">
                                     <LayerPanel
@@ -3247,6 +4425,8 @@
                                         masks={masks}
                                         elements={elements}
                                         infoPoints={infoPoints}
+                                        symbols={symbols}
+                                        measurements={measurements}
                                         selectedId={selectedId}
                                         onSelectItem={handleSelectItem}
                                         onDeleteItem={handleDeleteItem}
@@ -3474,6 +4654,119 @@
                                                         return null;
                                                 }
                                             })}
+
+                                            {/* Symbols */}
+                                            {symbols.filter(s => s.visible !== false).map(symbol => {
+                                                const isSelected = selectedId === symbol.id;
+                                                const symbolDef = HV_SYMBOLS[symbol.symbolId];
+                                                if (!symbolDef) return null;
+                                                const scale = symbol.scale || 1;
+                                                const rotation = symbol.rotation || 0;
+                                                return (
+                                                    <g key={symbol.id} style={{ cursor: currentTool === OPERATIONS.SELECT ? 'pointer' : 'default' }}>
+                                                        {isSelected && (
+                                                            <rect
+                                                                x={symbol.x - 2}
+                                                                y={symbol.y - 2}
+                                                                width={symbol.width * scale + 4}
+                                                                height={symbol.height * scale + 4}
+                                                                fill="none"
+                                                                stroke="#0ea5e9"
+                                                                strokeWidth={2 / zoom}
+                                                                strokeDasharray={`${4 / zoom}`}
+                                                            />
+                                                        )}
+                                                        <g transform={`translate(${symbol.x + symbol.width * scale / 2}, ${symbol.y + symbol.height * scale / 2}) rotate(${rotation}) scale(${scale}) translate(${-symbolDef.width / 2}, ${-symbolDef.height / 2})`}>
+                                                            <svg
+                                                                width={symbolDef.width}
+                                                                height={symbolDef.height}
+                                                                viewBox={`0 0 ${symbolDef.width} ${symbolDef.height}`}
+                                                                dangerouslySetInnerHTML={{ __html: symbolDef.svg }}
+                                                            />
+                                                        </g>
+                                                    </g>
+                                                );
+                                            })}
+
+                                            {/* Measurements */}
+                                            {measurements.filter(m => m.visible !== false).map(measurement => {
+                                                const isSelected = selectedId === measurement.id;
+                                                const midX = (measurement.x1 + measurement.x2) / 2;
+                                                const midY = (measurement.y1 + measurement.y2) / 2;
+                                                const angle = Math.atan2(measurement.y2 - measurement.y1, measurement.x2 - measurement.x1) * 180 / Math.PI;
+                                                const displayDist = measurement.realDistance !== null
+                                                    ? `${measurement.realDistance.toFixed(2)} ${measurement.unit === 'meters' ? 'm' : 'ft'}`
+                                                    : `${measurement.pixelDistance.toFixed(0)} px`;
+                                                return (
+                                                    <g key={measurement.id} style={{ cursor: currentTool === OPERATIONS.SELECT ? 'pointer' : 'default' }}>
+                                                        {/* Measurement line */}
+                                                        <line
+                                                            x1={measurement.x1}
+                                                            y1={measurement.y1}
+                                                            x2={measurement.x2}
+                                                            y2={measurement.y2}
+                                                            stroke="#22c55e"
+                                                            strokeWidth={2}
+                                                            strokeDasharray="6,3"
+                                                        />
+                                                        {/* End markers */}
+                                                        <circle cx={measurement.x1} cy={measurement.y1} r={4} fill="#22c55e" stroke="#fff" strokeWidth={1} />
+                                                        <circle cx={measurement.x2} cy={measurement.y2} r={4} fill="#22c55e" stroke="#fff" strokeWidth={1} />
+                                                        {/* Distance label */}
+                                                        <g transform={`translate(${midX}, ${midY})`}>
+                                                            <rect
+                                                                x={-35}
+                                                                y={-12}
+                                                                width={70}
+                                                                height={20}
+                                                                rx={4}
+                                                                fill="#1a1a1a"
+                                                                stroke="#22c55e"
+                                                                strokeWidth={1}
+                                                            />
+                                                            <text
+                                                                x={0}
+                                                                y={4}
+                                                                textAnchor="middle"
+                                                                fill="#22c55e"
+                                                                fontSize={11}
+                                                                fontWeight="bold"
+                                                                fontFamily="monospace"
+                                                            >
+                                                                {displayDist}
+                                                            </text>
+                                                        </g>
+                                                        {/* Selection indicator */}
+                                                        {isSelected && (
+                                                            <>
+                                                                <circle cx={measurement.x1} cy={measurement.y1} r={8} fill="none" stroke="#0ea5e9" strokeWidth={2 / zoom} strokeDasharray={`${4 / zoom}`} />
+                                                                <circle cx={measurement.x2} cy={measurement.y2} r={8} fill="none" stroke="#0ea5e9" strokeWidth={2 / zoom} strokeDasharray={`${4 / zoom}`} />
+                                                            </>
+                                                        )}
+                                                    </g>
+                                                );
+                                            })}
+
+                                            {/* Calibration preview */}
+                                            {currentTool === OPERATIONS.CALIBRATE && calibrationPoints.length > 0 && (
+                                                <g>
+                                                    <circle cx={calibrationPoints[0].x} cy={calibrationPoints[0].y} r={6} fill="#f59e0b" stroke="#fff" strokeWidth={2} />
+                                                    {calibrationPoints.length > 1 && (
+                                                        <>
+                                                            <circle cx={calibrationPoints[1].x} cy={calibrationPoints[1].y} r={6} fill="#f59e0b" stroke="#fff" strokeWidth={2} />
+                                                            <line
+                                                                x1={calibrationPoints[0].x}
+                                                                y1={calibrationPoints[0].y}
+                                                                x2={calibrationPoints[1].x}
+                                                                y2={calibrationPoints[1].y}
+                                                                stroke="#f59e0b"
+                                                                strokeWidth={2}
+                                                                strokeDasharray="8,4"
+                                                            />
+                                                        </>
+                                                    )}
+                                                </g>
+                                            )}
 
                                             {/* Info Points */}
                                             {infoPoints.filter(p => p.visible !== false).map(point => {
@@ -3736,7 +5029,7 @@
                             </div>
                             
                             {/* Status Bar */}
-                            <footer className="h-8 bg-panel-bg border-t border-panel-border flex items-center px-4 text-xs text-gray-400 gap-6">
+                            <footer className="h-8 bg-panel-bg border-t border-panel-border flex items-center px-4 text-xs text-gray-400 gap-4">
                                 <span className="mono">Zoom: {Math.round(zoom * 100)}%</span>
                                 {pdfData && (
                                     <>
@@ -3745,25 +5038,44 @@
                                     </>
                                 )}
                                 <span>Tool: {currentTool}</span>
+                                {/* Calibration status */}
+                                {scaleCalibration.isCalibrated ? (
+                                    <span className="text-green-400 flex items-center gap-1">
+                                        <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                        Scale: {scaleCalibration.pixelsPerMeter.toFixed(1)} px/{scaleCalibration.unit === 'meters' ? 'm' : 'ft'}
+                                    </span>
+                                ) : (
+                                    <span className="text-yellow-500 flex items-center gap-1">
+                                        <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                                        Not Calibrated
+                                    </span>
+                                )}
                                 <div className="flex-1" />
-                                <span>Snippets: {snippets.length}</span>
-                                <span>Masks: {masks.length}</span>
-                                <span>Elements: {elements.length}</span>
+                                <span>Symbols: {symbols.length}</span>
+                                <span>Meas: {measurements.length}</span>
                                 <span>Info: {infoPoints.length}</span>
                             </footer>
                         </main>
                         
                         {/* Right Panel - Properties */}
-                        <aside className="w-56 bg-panel-bg border-l border-panel-border">
-                            <div className="p-3 border-b border-panel-border">
+                        <aside className="w-72 bg-panel-bg border-l border-panel-border flex flex-col">
+                            <div className="p-3 border-b border-panel-border bg-[#1a1a1a] flex items-center gap-2">
+                                <div className="w-4 h-4 text-accent"><Icons.Settings /></div>
                                 <h3 className="text-sm font-medium text-gray-300">Properties</h3>
+                                {selectedItem && (
+                                    <span className="ml-auto px-2 py-0.5 text-[10px] bg-accent/20 text-accent rounded-full">
+                                        {selectedType}
+                                    </span>
+                                )}
                             </div>
-                            <PropertiesPanel
-                                selection={selectedItem}
-                                onUpdate={handleUpdateSelected}
-                                styles={styles}
-                                onStyleChange={(updates) => setStyles(prev => ({ ...prev, ...updates }))}
-                            />
+                            <div className="flex-1 overflow-y-auto">
+                                <PropertiesPanel
+                                    selection={selectedItem}
+                                    onUpdate={handleUpdateSelected}
+                                    styles={styles}
+                                    onStyleChange={(updates) => setStyles(prev => ({ ...prev, ...updates }))}
+                                />
+                            </div>
                             
                             {/* Page Navigation */}
                             {pdfData && pdfData.pageCount > 1 && (
@@ -3816,6 +5128,18 @@
                         onClose={() => setShowInfoSummary(false)}
                         infoPoints={infoPoints}
                         onSelectItem={handleSelectItem}
+                    />
+
+                    {/* Calibration Dialog */}
+                    <CalibrationDialog
+                        isOpen={showCalibrationDialog}
+                        onClose={() => {
+                            setShowCalibrationDialog(false);
+                            setCalibrationStep(0);
+                            setCalibrationPoints([]);
+                        }}
+                        onConfirm={handleCalibrationComplete}
+                        calibrationPoints={calibrationPoints}
                     />
                 </div>
             );
