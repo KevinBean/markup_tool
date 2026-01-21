@@ -352,6 +352,42 @@
                    point.y <= rect.y + rect.height;
         };
 
+        // Calculate distance from a point to a line segment
+        const pointToLineDistance = (point, x1, y1, x2, y2) => {
+            const A = point.x - x1;
+            const B = point.y - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+
+            const dot = A * C + B * D;
+            const lenSq = C * C + D * D;
+            let param = -1;
+
+            if (lenSq !== 0) param = dot / lenSq;
+
+            let xx, yy;
+
+            if (param < 0) {
+                xx = x1;
+                yy = y1;
+            } else if (param > 1) {
+                xx = x2;
+                yy = y2;
+            } else {
+                xx = x1 + param * C;
+                yy = y1 + param * D;
+            }
+
+            const dx = point.x - xx;
+            const dy = point.y - yy;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+
+        // Check if a point is inside a circle
+        const pointInCircle = (point, cx, cy, radius) => {
+            return distance(point, { x: cx, y: cy }) <= radius;
+        };
+
         // Capture a region from an image source as base64 data URL
         const captureRegion = async (imageSource, x, y, width, height) => {
             return new Promise((resolve) => {
@@ -848,6 +884,7 @@
             }
 
             const isInfoPoint = selection.type === 'info_point';
+            const isLine = selection.type === 'line';
 
             return (
                 <div className="p-4 space-y-4">
@@ -867,30 +904,84 @@
                         />
                     </div>
 
-                    {/* Position */}
-                    <div className="space-y-2">
-                        <div className="text-xs text-gray-500">Position</div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="text-xs text-gray-400">X</label>
-                                <input
-                                    type="number"
-                                    value={Math.round(selection.x || 0)}
-                                    onChange={(e) => onUpdate({ x: parseFloat(e.target.value) })}
-                                    className="w-full"
-                                />
+                    {/* Line-specific position (start and end points) */}
+                    {isLine && (
+                        <>
+                            <div className="space-y-2">
+                                <div className="text-xs text-gray-500">Start Point</div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-xs text-gray-400">X1</label>
+                                        <input
+                                            type="number"
+                                            value={Math.round(selection.x1 || 0)}
+                                            onChange={(e) => onUpdate({ x1: parseFloat(e.target.value) })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-400">Y1</label>
+                                        <input
+                                            type="number"
+                                            value={Math.round(selection.y1 || 0)}
+                                            onChange={(e) => onUpdate({ y1: parseFloat(e.target.value) })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label className="text-xs text-gray-400">Y</label>
-                                <input
-                                    type="number"
-                                    value={Math.round(selection.y || 0)}
-                                    onChange={(e) => onUpdate({ y: parseFloat(e.target.value) })}
-                                    className="w-full"
-                                />
+                            <div className="space-y-2">
+                                <div className="text-xs text-gray-500">End Point</div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-xs text-gray-400">X2</label>
+                                        <input
+                                            type="number"
+                                            value={Math.round(selection.x2 || 0)}
+                                            onChange={(e) => onUpdate({ x2: parseFloat(e.target.value) })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-400">Y2</label>
+                                        <input
+                                            type="number"
+                                            value={Math.round(selection.y2 || 0)}
+                                            onChange={(e) => onUpdate({ y2: parseFloat(e.target.value) })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Position - for non-line elements */}
+                    {!isLine && (
+                        <div className="space-y-2">
+                            <div className="text-xs text-gray-500">Position</div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-400">X</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.x || 0)}
+                                        onChange={(e) => onUpdate({ x: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400">Y</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.y || 0)}
+                                        onChange={(e) => onUpdate({ y: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Size - for non-info-point elements */}
                     {(selection.width !== undefined) && (
@@ -2136,11 +2227,38 @@
                                 p.visible !== false && distance(coords, { x: p.x, y: p.y }) <= 15
                             );
 
+                            // Check elements (rectangles, circles, lines)
+                            const clickedElement = elements.find(el => {
+                                if (el.visible === false) return false;
+                                switch (el.type) {
+                                    case 'rectangle':
+                                        return pointInRect(coords, { x: el.x, y: el.y, width: el.width, height: el.height });
+                                    case 'circle':
+                                        return pointInCircle(coords, el.x, el.y, el.radius);
+                                    case 'line':
+                                        return pointToLineDistance(coords, el.x1, el.y1, el.x2, el.y2) <= 8;
+                                    default:
+                                        return false;
+                                }
+                            });
+
                             if (clickedInfoPoint) {
                                 setSelectedId(clickedInfoPoint.id);
                                 setSelectedType('infoPoint');
                                 setIsDragging(true);
                                 setDragStart({ x: coords.x - clickedInfoPoint.x, y: coords.y - clickedInfoPoint.y });
+                            } else if (clickedElement) {
+                                setSelectedId(clickedElement.id);
+                                setSelectedType('element');
+                                setIsDragging(true);
+                                // For lines, store drag start relative to line midpoint
+                                if (clickedElement.type === 'line') {
+                                    const midX = (clickedElement.x1 + clickedElement.x2) / 2;
+                                    const midY = (clickedElement.y1 + clickedElement.y2) / 2;
+                                    setDragStart({ x: coords.x - midX, y: coords.y - midY });
+                                } else {
+                                    setDragStart({ x: coords.x - clickedElement.x, y: coords.y - clickedElement.y });
+                                }
                             } else if (clickedSnippet) {
                                 setSelectedId(clickedSnippet.id);
                                 setSelectedType('snippet');
@@ -2221,13 +2339,36 @@
                     if (selectedType === 'snippet') updatePosition(snippets, setSnippets);
                     if (selectedType === 'mask') updatePosition(masks, setMasks);
                     if (selectedType === 'infoPoint') updatePosition(infoPoints, setInfoPoints);
+                    if (selectedType === 'element') {
+                        setElements(elements.map(el => {
+                            if (el.id !== selectedId) return el;
+                            // Special handling for lines - move both endpoints
+                            if (el.type === 'line') {
+                                const midX = (el.x1 + el.x2) / 2;
+                                const midY = (el.y1 + el.y2) / 2;
+                                const newMidX = coords.x - dragStart.x;
+                                const newMidY = coords.y - dragStart.y;
+                                const dx = newMidX - midX;
+                                const dy = newMidY - midY;
+                                return {
+                                    ...el,
+                                    x1: el.x1 + dx,
+                                    y1: el.y1 + dy,
+                                    x2: el.x2 + dx,
+                                    y2: el.y2 + dy
+                                };
+                            }
+                            // Standard position update for rectangles and circles
+                            return { ...el, x: coords.x - dragStart.x, y: coords.y - dragStart.y };
+                        }));
+                    }
                     return;
                 }
 
                 if (isDrawing) {
                     setDrawEnd(coords);
                 }
-            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints]);
+            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints, elements]);
             
             const handleMouseUp = useCallback((e) => {
                 const coords = screenToCanvas(e.clientX, e.clientY);
