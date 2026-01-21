@@ -249,7 +249,17 @@
             INFO_POINT: 'info_point',
             PAN: 'pan'
         };
-        
+
+        const INFO_CATEGORIES = {
+            general: { label: 'General', color: '#6b7280', icon: 'i' },
+            note: { label: 'Note', color: '#0ea5e9', icon: '📝' },
+            warning: { label: 'Warning', color: '#f59e0b', icon: '⚠' },
+            important: { label: 'Important', color: '#ef4444', icon: '!' },
+            dimension: { label: 'Dimension', color: '#10b981', icon: '📐' },
+            specification: { label: 'Specification', color: '#8b5cf6', icon: '📋' },
+            reference: { label: 'Reference', color: '#ec4899', icon: '🔗' }
+        };
+
         const LAYERS = {
             PDF_BASE: 100,
             MASKS: 200,
@@ -539,6 +549,27 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+            ),
+            Table: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="3" y1="9" x2="21" y2="9"/>
+                    <line x1="3" y1="15" x2="21" y2="15"/>
+                    <line x1="9" y1="3" x2="9" y2="21"/>
+                    <line x1="15" y1="3" x2="15" y2="21"/>
+                </svg>
+            ),
+            Copy: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+            ),
+            X: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
             ),
         };
@@ -838,6 +869,37 @@
                     {/* Info Point specific fields */}
                     {isInfoPoint && (
                         <>
+                            {/* Number Badge */}
+                            <div className="flex items-center gap-2 py-2 px-3 bg-gray-800 rounded">
+                                <div
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                                    style={{ backgroundColor: selection.color || '#6b7280' }}
+                                >
+                                    {selection.number || '?'}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="text-xs text-gray-400">Point #{selection.number}</div>
+                                    <div className="text-sm text-gray-200">{selection.label || 'No label'}</div>
+                                </div>
+                            </div>
+
+                            {/* Category */}
+                            <div className="space-y-2">
+                                <div className="text-xs text-gray-500">Category</div>
+                                <select
+                                    value={selection.category || 'general'}
+                                    onChange={(e) => {
+                                        const cat = INFO_CATEGORIES[e.target.value];
+                                        onUpdate({ category: e.target.value, color: cat.color });
+                                    }}
+                                    className="w-full bg-[#1a1a1a] border border-[#3a3a3a] text-[#e5e5e5] p-2 rounded text-xs"
+                                >
+                                    {Object.entries(INFO_CATEGORIES).map(([key, cat]) => (
+                                        <option key={key} value={key}>{cat.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             {/* Label */}
                             <div className="space-y-2">
                                 <div className="text-xs text-gray-500">Label</div>
@@ -846,7 +908,7 @@
                                     value={selection.label || ''}
                                     onChange={(e) => onUpdate({ label: e.target.value })}
                                     className="w-full"
-                                    placeholder="Short label"
+                                    placeholder="Short label (shown on canvas)"
                                 />
                             </div>
 
@@ -857,35 +919,82 @@
                                     value={selection.description || ''}
                                     onChange={(e) => onUpdate({ description: e.target.value })}
                                     className="w-full bg-[#1a1a1a] border border-[#3a3a3a] text-[#e5e5e5] p-2 rounded text-xs"
-                                    rows={3}
-                                    placeholder="Detailed information..."
+                                    rows={4}
+                                    placeholder="Detailed information, notes, specifications..."
                                 />
                             </div>
 
-                            {/* Color */}
+                            {/* Priority */}
                             <div className="space-y-2">
-                                <div className="text-xs text-gray-500">Point Color</div>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="color"
-                                        value={selection.color || '#0ea5e9'}
-                                        onChange={(e) => onUpdate({ color: e.target.value })}
-                                    />
-                                    <span className="text-xs text-gray-400">{selection.color || '#0ea5e9'}</span>
+                                <div className="text-xs text-gray-500">Priority</div>
+                                <div className="flex gap-1">
+                                    {['low', 'medium', 'high'].map(p => (
+                                        <button
+                                            key={p}
+                                            onClick={() => onUpdate({ priority: p })}
+                                            className={`flex-1 px-2 py-1 text-xs rounded capitalize ${
+                                                (selection.priority || 'medium') === p
+                                                    ? p === 'high' ? 'bg-red-600 text-white'
+                                                    : p === 'medium' ? 'bg-yellow-600 text-white'
+                                                    : 'bg-green-600 text-white'
+                                                    : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                                            }`}
+                                        >
+                                            {p}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* Radius */}
+                            {/* Tags */}
                             <div className="space-y-2">
-                                <div className="text-xs text-gray-500">Point Size</div>
+                                <div className="text-xs text-gray-500">Tags</div>
                                 <input
-                                    type="number"
-                                    value={selection.radius || 8}
-                                    onChange={(e) => onUpdate({ radius: parseFloat(e.target.value) })}
+                                    type="text"
+                                    value={selection.tags || ''}
+                                    onChange={(e) => onUpdate({ tags: e.target.value })}
                                     className="w-full"
-                                    min="4"
-                                    max="24"
+                                    placeholder="tag1, tag2, tag3..."
                                 />
+                                {selection.tags && (
+                                    <div className="flex flex-wrap gap-1">
+                                        {selection.tags.split(',').map((tag, i) => tag.trim() && (
+                                            <span key={i} className="px-2 py-0.5 bg-gray-700 text-gray-300 rounded text-xs">
+                                                {tag.trim()}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Appearance */}
+                            <div className="space-y-2 pt-2 border-t border-panel-border">
+                                <div className="text-xs text-gray-500">Appearance</div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-xs text-gray-400">Color</label>
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <input
+                                                type="color"
+                                                value={selection.color || '#6b7280'}
+                                                onChange={(e) => onUpdate({ color: e.target.value })}
+                                                className="w-8 h-6"
+                                            />
+                                            <span className="text-xs text-gray-500">{selection.color || '#6b7280'}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-400">Size</label>
+                                        <input
+                                            type="number"
+                                            value={selection.radius || 12}
+                                            onChange={(e) => onUpdate({ radius: parseFloat(e.target.value) })}
+                                            className="w-full mt-1"
+                                            min="8"
+                                            max="32"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </>
                     )}
@@ -1018,6 +1127,203 @@
         };
 
         // ============================================
+        // INFO SUMMARY PANEL COMPONENT
+        // ============================================
+
+        const InfoSummaryPanel = ({ infoPoints, onClose, onSelectPoint }) => {
+            const [groupBy, setGroupBy] = useState('category');
+            const [copied, setCopied] = useState(false);
+
+            // Group info points
+            const grouped = useMemo(() => {
+                const groups = {};
+                infoPoints.forEach(point => {
+                    const key = groupBy === 'category'
+                        ? (point.category || 'general')
+                        : (point.priority || 'medium');
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(point);
+                });
+                return groups;
+            }, [infoPoints, groupBy]);
+
+            // Generate markdown table
+            const generateMarkdown = () => {
+                let md = '# Information Points Summary\n\n';
+
+                Object.entries(grouped).forEach(([key, points]) => {
+                    const label = groupBy === 'category'
+                        ? (INFO_CATEGORIES[key]?.label || key)
+                        : key.charAt(0).toUpperCase() + key.slice(1);
+
+                    md += `## ${label}\n\n`;
+                    md += '| # | Label | Description | Tags | Priority |\n';
+                    md += '|---|-------|-------------|------|----------|\n';
+
+                    points.forEach(p => {
+                        const desc = (p.description || '-').replace(/\n/g, ' ').substring(0, 50);
+                        md += `| ${p.number || '?'} | ${p.label || '-'} | ${desc}${p.description?.length > 50 ? '...' : ''} | ${p.tags || '-'} | ${p.priority || 'medium'} |\n`;
+                    });
+                    md += '\n';
+                });
+
+                return md;
+            };
+
+            const copyToClipboard = () => {
+                navigator.clipboard.writeText(generateMarkdown()).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                });
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-panel-bg border border-panel-border rounded-lg shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-panel-border">
+                            <div className="flex items-center gap-3">
+                                <div className="w-6 h-6 text-accent"><Icons.Table /></div>
+                                <h2 className="text-lg font-medium text-gray-200">Info Points Summary</h2>
+                                <span className="px-2 py-0.5 bg-gray-700 rounded text-xs text-gray-400">
+                                    {infoPoints.length} points
+                                </span>
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className="p-2 hover:bg-gray-700 rounded transition-colors"
+                            >
+                                <div className="w-5 h-5 text-gray-400"><Icons.X /></div>
+                            </button>
+                        </div>
+
+                        {/* Controls */}
+                        <div className="flex items-center gap-4 p-3 border-b border-panel-border bg-gray-800/50">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-400">Group by:</span>
+                                <select
+                                    value={groupBy}
+                                    onChange={(e) => setGroupBy(e.target.value)}
+                                    className="bg-gray-700 border border-gray-600 text-gray-200 text-xs rounded px-2 py-1"
+                                >
+                                    <option value="category">Category</option>
+                                    <option value="priority">Priority</option>
+                                </select>
+                            </div>
+                            <button
+                                onClick={copyToClipboard}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors ${
+                                    copied ? 'bg-green-600 text-white' : 'bg-accent hover:bg-accent/80 text-white'
+                                }`}
+                            >
+                                <div className="w-4 h-4"><Icons.Copy /></div>
+                                {copied ? 'Copied!' : 'Copy as Markdown'}
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-auto p-4">
+                            {infoPoints.length === 0 ? (
+                                <div className="text-center py-12 text-gray-500">
+                                    <div className="w-12 h-12 mx-auto mb-4 opacity-50"><Icons.InfoPoint /></div>
+                                    <p>No info points yet.</p>
+                                    <p className="text-xs mt-1">Use the Info Point tool (I) to add points to your document.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {Object.entries(grouped).map(([key, points]) => {
+                                        const categoryInfo = groupBy === 'category'
+                                            ? INFO_CATEGORIES[key] || INFO_CATEGORIES.general
+                                            : { label: key.charAt(0).toUpperCase() + key.slice(1), color: '#6b7280' };
+
+                                        return (
+                                            <div key={key}>
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <div
+                                                        className="w-3 h-3 rounded-full"
+                                                        style={{ backgroundColor: categoryInfo.color }}
+                                                    />
+                                                    <h3 className="text-sm font-medium text-gray-300">
+                                                        {categoryInfo.label}
+                                                    </h3>
+                                                    <span className="text-xs text-gray-500">({points.length})</span>
+                                                </div>
+
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-xs">
+                                                        <thead>
+                                                            <tr className="text-left text-gray-500 border-b border-gray-700">
+                                                                <th className="pb-2 pr-3 w-10">#</th>
+                                                                <th className="pb-2 pr-3">Label</th>
+                                                                <th className="pb-2 pr-3">Description</th>
+                                                                <th className="pb-2 pr-3">Tags</th>
+                                                                <th className="pb-2 pr-3">Priority</th>
+                                                                <th className="pb-2 w-16">Position</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {points.map(point => (
+                                                                <tr
+                                                                    key={point.id}
+                                                                    className="border-b border-gray-800 hover:bg-gray-800/50 cursor-pointer"
+                                                                    onClick={() => onSelectPoint(point)}
+                                                                >
+                                                                    <td className="py-2 pr-3">
+                                                                        <div
+                                                                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                                                                            style={{ backgroundColor: point.color || categoryInfo.color }}
+                                                                        >
+                                                                            {point.number || '?'}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-2 pr-3 text-gray-200 font-medium">
+                                                                        {point.label || <span className="text-gray-500 italic">No label</span>}
+                                                                    </td>
+                                                                    <td className="py-2 pr-3 text-gray-400 max-w-xs truncate">
+                                                                        {point.description || <span className="text-gray-600">-</span>}
+                                                                    </td>
+                                                                    <td className="py-2 pr-3">
+                                                                        {point.tags ? (
+                                                                            <div className="flex flex-wrap gap-1">
+                                                                                {point.tags.split(',').slice(0, 3).map((tag, i) => tag.trim() && (
+                                                                                    <span key={i} className="px-1.5 py-0.5 bg-gray-700 rounded text-gray-400">
+                                                                                        {tag.trim()}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="text-gray-600">-</span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="py-2 pr-3">
+                                                                        <span className={`px-2 py-0.5 rounded text-xs ${
+                                                                            point.priority === 'high' ? 'bg-red-900/50 text-red-400' :
+                                                                            point.priority === 'low' ? 'bg-green-900/50 text-green-400' :
+                                                                            'bg-yellow-900/50 text-yellow-400'
+                                                                        }`}>
+                                                                            {point.priority || 'medium'}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-2 text-gray-500 text-xs">
+                                                                        {Math.round(point.x)}, {Math.round(point.y)}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
         // SNIPPET LIBRARY COMPONENT
         // ============================================
 
@@ -1143,6 +1449,9 @@
                 const saved = localStorage.getItem('snippetLibrary');
                 return saved ? JSON.parse(saved) : [];
             });
+
+            // Info Summary Panel
+            const [showInfoSummary, setShowInfoSummary] = useState(false);
 
             // UI State
             const [showGrid, setShowGrid] = useState(true);
@@ -1356,17 +1665,22 @@
 
                         case OPERATIONS.INFO_POINT:
                             // Single click to place info point
+                            const pointNumber = infoPoints.length + 1;
                             const newInfoPoint = {
                                 id: generateId(),
                                 type: 'info_point',
-                                name: `Info ${infoPoints.length + 1}`,
+                                number: pointNumber,
+                                name: `Info ${pointNumber}`,
                                 x: coords.x,
                                 y: coords.y,
                                 label: '',
                                 description: '',
+                                category: 'general',
+                                priority: 'medium',
+                                tags: '',
                                 metadata: {},
-                                color: styles.stroke,
-                                radius: 8,
+                                color: INFO_CATEGORIES.general.color,
+                                radius: 12,
                                 visible: true,
                                 locked: false
                             };
@@ -2125,9 +2439,15 @@
                                                 active={currentTool === OPERATIONS.INFO_POINT}
                                                 onClick={() => setCurrentTool(OPERATIONS.INFO_POINT)}
                                             />
+                                            <ToolButton
+                                                icon={Icons.Table}
+                                                label="Info Summary"
+                                                active={showInfoSummary}
+                                                onClick={() => setShowInfoSummary(prev => !prev)}
+                                            />
                                         </div>
                                     </div>
-                                    
+
                                     {/* View Controls */}
                                     <div className="pt-2 border-t border-panel-border">
                                         <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">View</div>
@@ -2418,58 +2738,102 @@
                                             })}
 
                                             {/* Info Points */}
-                                            {infoPoints.filter(p => p.visible !== false).map(point => {
+                                            {infoPoints.filter(p => p.visible !== false).map((point, index) => {
                                                 const isSelected = selectedId === point.id;
+                                                const category = INFO_CATEGORIES[point.category] || INFO_CATEGORIES.general;
+                                                const pointColor = point.color || category.color;
+                                                const pointNumber = point.number || (index + 1);
+                                                const radius = point.radius || 12;
+
                                                 return (
                                                     <g key={point.id} style={{ cursor: currentTool === OPERATIONS.SELECT ? 'pointer' : 'default' }}>
+                                                        {/* Shadow for depth */}
+                                                        <ellipse
+                                                            cx={point.x + 2}
+                                                            cy={point.y + 2}
+                                                            rx={radius}
+                                                            ry={radius * 0.6}
+                                                            fill="rgba(0,0,0,0.3)"
+                                                            style={{ pointerEvents: 'none' }}
+                                                        />
                                                         {/* Outer ring when selected */}
                                                         {isSelected && (
                                                             <circle
                                                                 cx={point.x}
                                                                 cy={point.y}
-                                                                r={(point.radius || 8) + 4}
+                                                                r={radius + 5}
                                                                 fill="none"
                                                                 stroke="#0ea5e9"
                                                                 strokeWidth={2 / zoom}
                                                                 strokeDasharray={`${4 / zoom}`}
                                                             />
                                                         )}
-                                                        {/* Main point */}
+                                                        {/* Main circle with gradient effect */}
                                                         <circle
                                                             cx={point.x}
                                                             cy={point.y}
-                                                            r={point.radius || 8}
-                                                            fill={point.color || '#0ea5e9'}
+                                                            r={radius}
+                                                            fill={pointColor}
                                                             stroke="#ffffff"
-                                                            strokeWidth={2}
+                                                            strokeWidth={2.5}
                                                         />
-                                                        {/* Info icon (i) */}
+                                                        {/* Inner highlight */}
+                                                        <circle
+                                                            cx={point.x - radius * 0.25}
+                                                            cy={point.y - radius * 0.25}
+                                                            r={radius * 0.3}
+                                                            fill="rgba(255,255,255,0.3)"
+                                                            style={{ pointerEvents: 'none' }}
+                                                        />
+                                                        {/* Number marker */}
                                                         <text
                                                             x={point.x}
-                                                            y={point.y + 4}
+                                                            y={point.y + (radius > 10 ? 5 : 4)}
                                                             textAnchor="middle"
                                                             fill="#ffffff"
-                                                            fontSize="12"
+                                                            fontSize={radius > 10 ? 14 : 11}
                                                             fontWeight="bold"
+                                                            fontFamily="Arial, sans-serif"
                                                             style={{ pointerEvents: 'none' }}
                                                         >
-                                                            i
+                                                            {pointNumber}
                                                         </text>
-                                                        {/* Label if present */}
+                                                        {/* Label with background */}
                                                         {point.label && (
-                                                            <text
-                                                                x={point.x}
-                                                                y={point.y - (point.radius || 8) - 6}
-                                                                textAnchor="middle"
-                                                                fill="#ffffff"
-                                                                fontSize="11"
-                                                                style={{
-                                                                    textShadow: '0 0 3px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.5)',
-                                                                    pointerEvents: 'none'
-                                                                }}
-                                                            >
-                                                                {point.label}
-                                                            </text>
+                                                            <g>
+                                                                <rect
+                                                                    x={point.x - (point.label.length * 3.5) - 6}
+                                                                    y={point.y - radius - 22}
+                                                                    width={(point.label.length * 7) + 12}
+                                                                    height={18}
+                                                                    rx={4}
+                                                                    fill="rgba(0,0,0,0.75)"
+                                                                    style={{ pointerEvents: 'none' }}
+                                                                />
+                                                                <text
+                                                                    x={point.x}
+                                                                    y={point.y - radius - 9}
+                                                                    textAnchor="middle"
+                                                                    fill="#ffffff"
+                                                                    fontSize="11"
+                                                                    fontFamily="Arial, sans-serif"
+                                                                    style={{ pointerEvents: 'none' }}
+                                                                >
+                                                                    {point.label}
+                                                                </text>
+                                                            </g>
+                                                        )}
+                                                        {/* Category indicator dot */}
+                                                        {point.category && point.category !== 'general' && (
+                                                            <circle
+                                                                cx={point.x + radius * 0.7}
+                                                                cy={point.y - radius * 0.7}
+                                                                r={4}
+                                                                fill={category.color}
+                                                                stroke="#ffffff"
+                                                                strokeWidth={1.5}
+                                                                style={{ pointerEvents: 'none' }}
+                                                            />
                                                         )}
                                                     </g>
                                                 );
@@ -2642,10 +3006,23 @@
                             </div>
                         </aside>
                     </div>
+
+                    {/* Info Summary Panel */}
+                    {showInfoSummary && (
+                        <InfoSummaryPanel
+                            infoPoints={infoPoints}
+                            onClose={() => setShowInfoSummary(false)}
+                            onSelectPoint={(point) => {
+                                setSelectedId(point.id);
+                                setSelectedType('infoPoint');
+                                setShowInfoSummary(false);
+                            }}
+                        />
+                    )}
                 </div>
             );
         };
-        
+
         // ============================================
         // MOUNT APPLICATION
         // ============================================
