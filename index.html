@@ -1729,34 +1729,40 @@
             const [groupBy, setGroupBy] = useState('none');
             const [sortBy, setSortBy] = useState('number');
 
-            if (!isOpen) return null;
+            // Sort and group points - all hooks must be called before any early return
+            const { sortedPoints, groupedPoints } = useMemo(() => {
+                // Sort points
+                const sorted = [...infoPoints].sort((a, b) => {
+                    switch (sortBy) {
+                        case 'number': return (a.number || 0) - (b.number || 0);
+                        case 'label': return (a.label || '').localeCompare(b.label || '');
+                        case 'category': return (a.category || '').localeCompare(b.category || '');
+                        case 'priority':
+                            const priorityOrder = { high: 0, medium: 1, low: 2 };
+                            return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
+                        default: return 0;
+                    }
+                });
 
-            // Sort points
-            const sortedPoints = [...infoPoints].sort((a, b) => {
-                switch (sortBy) {
-                    case 'number': return (a.number || 0) - (b.number || 0);
-                    case 'label': return (a.label || '').localeCompare(b.label || '');
-                    case 'category': return (a.category || '').localeCompare(b.category || '');
-                    case 'priority':
-                        const priorityOrder = { high: 0, medium: 1, low: 2 };
-                        return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
-                    default: return 0;
+                // Group points
+                let grouped;
+                if (groupBy === 'none') {
+                    grouped = { 'All Points': sorted };
+                } else {
+                    grouped = sorted.reduce((groups, point) => {
+                        const key = groupBy === 'category'
+                            ? (INFO_CATEGORIES[point.category] || INFO_CATEGORIES.general).label
+                            : (INFO_PRIORITIES[point.priority] || INFO_PRIORITIES.medium).label;
+                        if (!groups[key]) groups[key] = [];
+                        groups[key].push(point);
+                        return groups;
+                    }, {});
                 }
-            });
 
-            // Group points
-            const groupedPoints = useMemo(() => {
-                if (groupBy === 'none') return { 'All Points': sortedPoints };
+                return { sortedPoints: sorted, groupedPoints: grouped };
+            }, [infoPoints, sortBy, groupBy]);
 
-                return sortedPoints.reduce((groups, point) => {
-                    const key = groupBy === 'category'
-                        ? (INFO_CATEGORIES[point.category] || INFO_CATEGORIES.general).label
-                        : (INFO_PRIORITIES[point.priority] || INFO_PRIORITIES.medium).label;
-                    if (!groups[key]) groups[key] = [];
-                    groups[key].push(point);
-                    return groups;
-                }, {});
-            }, [sortedPoints, groupBy]);
+            if (!isOpen) return null;
 
             // Export to Markdown
             const handleExportMarkdown = () => {
@@ -3819,7 +3825,8 @@
         // MOUNT APPLICATION
         // ============================================
         
-        ReactDOM.render(<CableMarkupEditor />, document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CableMarkupEditor />);
     </script>
 </body>
 </html>
