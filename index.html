@@ -1,0 +1,2182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cable Drawing Markup Editor</title>
+    
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+    
+    <!-- pdf-lib for PDF export -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'editor-bg': '#1a1a1a',
+                        'panel-bg': '#252525',
+                        'panel-border': '#3a3a3a',
+                        'accent': '#0ea5e9',
+                        'accent-hover': '#38bdf8',
+                        'success': '#22c55e',
+                        'warning': '#f59e0b',
+                        'danger': '#ef4444',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'IBM Plex Sans', sans-serif;
+            background: #1a1a1a;
+            color: #e5e5e5;
+            overflow: hidden;
+        }
+        
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #404040;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #505050;
+        }
+        
+        /* Canvas container */
+        .canvas-container {
+            position: relative;
+            overflow: hidden;
+            background: 
+                linear-gradient(90deg, #2a2a2a 1px, transparent 1px),
+                linear-gradient(#2a2a2a 1px, transparent 1px),
+                #1e1e1e;
+            background-size: 20px 20px;
+        }
+        
+        /* Selection box */
+        .selection-box {
+            border: 2px dashed #0ea5e9;
+            background: rgba(14, 165, 233, 0.1);
+            pointer-events: none;
+        }
+        
+        /* Element handles */
+        .handle {
+            width: 10px;
+            height: 10px;
+            background: white;
+            border: 2px solid #0ea5e9;
+            position: absolute;
+            cursor: pointer;
+        }
+        
+        .handle-nw { cursor: nw-resize; }
+        .handle-ne { cursor: ne-resize; }
+        .handle-sw { cursor: sw-resize; }
+        .handle-se { cursor: se-resize; }
+        .handle-n { cursor: n-resize; }
+        .handle-s { cursor: s-resize; }
+        .handle-e { cursor: e-resize; }
+        .handle-w { cursor: w-resize; }
+        
+        /* Tool button active state */
+        .tool-btn.active {
+            background: #0ea5e9 !important;
+            color: white !important;
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            margin-left: 8px;
+            padding: 4px 8px;
+            background: #404040;
+            color: white;
+            font-size: 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+        }
+        
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+        
+        /* Drop zone */
+        .drop-zone {
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone.drag-over {
+            background: rgba(14, 165, 233, 0.2) !important;
+            border-color: #0ea5e9 !important;
+        }
+        
+        /* Loading spinner */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Snippet/Mask styling */
+        .snippet-overlay {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .element-selected {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+        
+        /* Input styling */
+        input[type="number"], input[type="text"] {
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            color: #e5e5e5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        input[type="number"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #0ea5e9;
+        }
+        
+        input[type="color"] {
+            width: 32px;
+            height: 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: transparent;
+        }
+        
+        select {
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            color: #e5e5e5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        /* Page navigation */
+        .page-nav-btn {
+            transition: all 0.2s;
+        }
+        
+        .page-nav-btn:hover:not(:disabled) {
+            background: #404040;
+        }
+        
+        .page-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+        
+        // ============================================
+        // CONFIGURATION & CONSTANTS
+        // ============================================
+        
+        const OPERATIONS = {
+            SELECT: 'select',
+            SNIPPET: 'snippet',
+            MASK: 'mask',
+            LINE: 'line',
+            RECTANGLE: 'rectangle',
+            CIRCLE: 'circle',
+            ARROW: 'arrow',
+            TEXT: 'text',
+            DIMENSION: 'dimension',
+            PAN: 'pan'
+        };
+        
+        const LAYERS = {
+            PDF_BASE: 100,
+            MASKS: 200,
+            SNIPPETS: 300,
+            ELEMENTS: 400,
+            ANNOTATIONS: 500
+        };
+        
+        const DEFAULT_STYLES = {
+            stroke: '#000000',
+            strokeWidth: 2,
+            fill: 'none',
+            fontSize: 14,
+            fontFamily: 'Arial'
+        };
+        
+        const ZOOM_LIMITS = { min: 0.1, max: 5.0 };
+        const GRID_SIZE = 20;
+        const RENDER_DPI = 150;
+        
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        
+        const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+        
+        const distance = (p1, p2) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        
+        const debounce = (func, delay) => {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func(...args), delay);
+            };
+        };
+        
+        const pointInRect = (point, rect) => {
+            return point.x >= rect.x && 
+                   point.x <= rect.x + rect.width &&
+                   point.y >= rect.y && 
+                   point.y <= rect.y + rect.height;
+        };
+        
+        // ============================================
+        // ICONS
+        // ============================================
+        
+        const Icons = {
+            Cursor: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+                    <path d="M13 13l6 6"/>
+                </svg>
+            ),
+            Scissors: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="6" cy="6" r="3"/>
+                    <circle cx="6" cy="18" r="3"/>
+                    <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+                    <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+                    <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+                </svg>
+            ),
+            Square: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                </svg>
+            ),
+            Mask: () => (
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                </svg>
+            ),
+            Line: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="5" y1="19" x2="19" y2="5"/>
+                </svg>
+            ),
+            Circle: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="9"/>
+                </svg>
+            ),
+            Arrow: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                </svg>
+            ),
+            Type: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="4 7 4 4 20 4 20 7"/>
+                    <line x1="9" y1="20" x2="15" y2="20"/>
+                    <line x1="12" y1="4" x2="12" y2="20"/>
+                </svg>
+            ),
+            Ruler: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                    <line x1="12" y1="11" x2="12" y2="17"/>
+                    <line x1="9" y1="17" x2="15" y2="17"/>
+                </svg>
+            ),
+            Move: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="5 9 2 12 5 15"/>
+                    <polyline points="9 5 12 2 15 5"/>
+                    <polyline points="15 19 12 22 9 19"/>
+                    <polyline points="19 9 22 12 19 15"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                    <line x1="12" y1="2" x2="12" y2="22"/>
+                </svg>
+            ),
+            ZoomIn: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    <line x1="11" y1="8" x2="11" y2="14"/>
+                    <line x1="8" y1="11" x2="14" y2="11"/>
+                </svg>
+            ),
+            ZoomOut: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    <line x1="8" y1="11" x2="14" y2="11"/>
+                </svg>
+            ),
+            Fit: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+            ),
+            Undo: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 7v6h6"/>
+                    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                </svg>
+            ),
+            Redo: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 7v6h-6"/>
+                    <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+                </svg>
+            ),
+            Download: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+            ),
+            Upload: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+            ),
+            File: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>
+            ),
+            Save: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                </svg>
+            ),
+            Folder: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+            ),
+            Trash: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+            ),
+            Copy: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+            ),
+            Grid: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="7" height="7"/>
+                    <rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+            ),
+            Layers: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                    <polyline points="2 17 12 22 22 17"/>
+                    <polyline points="2 12 12 17 22 12"/>
+                </svg>
+            ),
+            Settings: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            ),
+            ChevronLeft: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="15 18 9 12 15 6"/>
+                </svg>
+            ),
+            ChevronRight: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+            ),
+            X: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            ),
+            Check: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            ),
+            Eye: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+            ),
+            EyeOff: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+            ),
+            Lock: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+            ),
+            Unlock: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+                </svg>
+            ),
+            RotateCw: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+            ),
+        };
+        
+        // ============================================
+        // HISTORY MANAGER (Undo/Redo)
+        // ============================================
+        
+        const useHistory = (initialState, maxSize = 50) => {
+            const [history, setHistory] = useState([initialState]);
+            const [index, setIndex] = useState(0);
+            
+            const current = history[index];
+            
+            const push = useCallback((state) => {
+                setHistory(prev => {
+                    const newHistory = prev.slice(0, index + 1);
+                    newHistory.push(state);
+                    if (newHistory.length > maxSize) {
+                        newHistory.shift();
+                        return newHistory;
+                    }
+                    return newHistory;
+                });
+                setIndex(prev => Math.min(prev + 1, maxSize - 1));
+            }, [index, maxSize]);
+            
+            const undo = useCallback(() => {
+                setIndex(prev => Math.max(0, prev - 1));
+            }, []);
+            
+            const redo = useCallback(() => {
+                setIndex(prev => Math.min(history.length - 1, prev + 1));
+            }, [history.length]);
+            
+            const canUndo = index > 0;
+            const canRedo = index < history.length - 1;
+            
+            return { current, push, undo, redo, canUndo, canRedo };
+        };
+        
+        // ============================================
+        // PDF LOADER
+        // ============================================
+        
+        const loadPDF = async (file, dpi = RENDER_DPI) => {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    const pages = [];
+                    
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const viewport = page.getViewport({ scale: dpi / 72 });
+                        
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        
+                        await page.render({
+                            canvasContext: context,
+                            viewport: viewport
+                        }).promise;
+                        
+                        pages.push({
+                            pageNumber: i,
+                            width: viewport.width,
+                            height: viewport.height,
+                            imageData: canvas.toDataURL('image/png'),
+                            elements: [],
+                            masks: [],
+                            snippets: []
+                        });
+                    }
+                    
+                    resolve({
+                        fileName: file.name,
+                        pageCount: pdf.numPages,
+                        pages: pages
+                    });
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        };
+        
+        // ============================================
+        // PDF EXPORTER
+        // ============================================
+        
+        const exportToPDF = async (canvasRef, fileName = 'markup-export.pdf') => {
+            const { PDFDocument } = PDFLib;
+            
+            const canvas = canvasRef.current;
+            const imageData = canvas.toDataURL('image/png');
+            
+            const pdfDoc = await PDFDocument.create();
+            const pngImage = await pdfDoc.embedPng(imageData);
+            
+            const page = pdfDoc.addPage([canvas.width * 72 / RENDER_DPI, canvas.height * 72 / RENDER_DPI]);
+            page.drawImage(pngImage, {
+                x: 0,
+                y: 0,
+                width: canvas.width * 72 / RENDER_DPI,
+                height: canvas.height * 72 / RENDER_DPI
+            });
+            
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+        };
+        
+        // ============================================
+        // TOOL BUTTON COMPONENT
+        // ============================================
+        
+        const ToolButton = ({ icon: Icon, label, active, onClick, shortcut, disabled }) => (
+            <button
+                className={`
+                    tool-btn w-10 h-10 flex items-center justify-center rounded-lg
+                    transition-all duration-200 tooltip
+                    ${active ? 'bg-accent text-white' : 'bg-panel-bg text-gray-400 hover:bg-gray-700 hover:text-white'}
+                    ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                `}
+                onClick={onClick}
+                disabled={disabled}
+                data-tip={`${label}${shortcut ? ` (${shortcut})` : ''}`}
+            >
+                <div className="w-5 h-5">
+                    <Icon />
+                </div>
+            </button>
+        );
+        
+        // ============================================
+        // PROPERTIES PANEL COMPONENT
+        // ============================================
+        
+        const PropertiesPanel = ({ selection, onUpdate, styles, onStyleChange }) => {
+            if (!selection) {
+                return (
+                    <div className="p-4 text-gray-500 text-sm">
+                        No element selected
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="p-4 space-y-4">
+                    <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">
+                        {selection.type} Properties
+                    </div>
+                    
+                    {/* Position */}
+                    <div className="space-y-2">
+                        <div className="text-xs text-gray-500">Position</div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="text-xs text-gray-400">X</label>
+                                <input
+                                    type="number"
+                                    value={Math.round(selection.x || 0)}
+                                    onChange={(e) => onUpdate({ x: parseFloat(e.target.value) })}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-400">Y</label>
+                                <input
+                                    type="number"
+                                    value={Math.round(selection.y || 0)}
+                                    onChange={(e) => onUpdate({ y: parseFloat(e.target.value) })}
+                                    className="w-full"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Size */}
+                    {(selection.width !== undefined) && (
+                        <div className="space-y-2">
+                            <div className="text-xs text-gray-500">Size</div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-400">W</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.width || 0)}
+                                        onChange={(e) => onUpdate({ width: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400">H</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.height || 0)}
+                                        onChange={(e) => onUpdate({ height: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Style */}
+                    <div className="space-y-2 pt-2 border-t border-panel-border">
+                        <div className="text-xs text-gray-500">Style</div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-400 w-16">Stroke</label>
+                            <input
+                                type="color"
+                                value={styles.stroke}
+                                onChange={(e) => onStyleChange({ stroke: e.target.value })}
+                            />
+                            <input
+                                type="number"
+                                value={styles.strokeWidth}
+                                onChange={(e) => onStyleChange({ strokeWidth: parseFloat(e.target.value) })}
+                                className="w-16"
+                                min="1"
+                                max="20"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-400 w-16">Fill</label>
+                            <input
+                                type="color"
+                                value={styles.fill === 'none' ? '#ffffff' : styles.fill}
+                                onChange={(e) => onStyleChange({ fill: e.target.value })}
+                            />
+                            <button
+                                className={`px-2 py-1 text-xs rounded ${styles.fill === 'none' ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300'}`}
+                                onClick={() => onStyleChange({ fill: styles.fill === 'none' ? '#ffffff' : 'none' })}
+                            >
+                                None
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        // ============================================
+        // LAYER PANEL COMPONENT
+        // ============================================
+        
+        const LayerPanel = ({ snippets, masks, elements, onSelectItem, selectedId, onDeleteItem, onToggleVisibility }) => {
+            const renderItem = (item, type) => (
+                <div
+                    key={item.id}
+                    className={`
+                        flex items-center gap-2 p-2 rounded cursor-pointer
+                        ${selectedId === item.id ? 'bg-accent/20 border border-accent' : 'hover:bg-gray-700'}
+                    `}
+                    onClick={() => onSelectItem(item, type)}
+                >
+                    <button
+                        className="w-5 h-5 text-gray-400 hover:text-white"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleVisibility(item.id, type);
+                        }}
+                    >
+                        {item.visible !== false ? <Icons.Eye /> : <Icons.EyeOff />}
+                    </button>
+                    <span className="flex-1 text-sm truncate">
+                        {item.name || `${type} ${item.id.slice(-4)}`}
+                    </span>
+                    <button
+                        className="w-5 h-5 text-gray-400 hover:text-danger"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteItem(item.id, type);
+                        }}
+                    >
+                        <Icons.Trash />
+                    </button>
+                </div>
+            );
+            
+            return (
+                <div className="p-2 space-y-4">
+                    {/* Snippets */}
+                    <div>
+                        <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                            <Icons.Scissors />
+                            <span>Snippets ({snippets.length})</span>
+                        </div>
+                        <div className="space-y-1">
+                            {snippets.map(s => renderItem(s, 'snippet'))}
+                        </div>
+                    </div>
+                    
+                    {/* Masks */}
+                    <div>
+                        <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                            <Icons.Mask />
+                            <span>Masks ({masks.length})</span>
+                        </div>
+                        <div className="space-y-1">
+                            {masks.map(m => renderItem(m, 'mask'))}
+                        </div>
+                    </div>
+                    
+                    {/* Elements */}
+                    <div>
+                        <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                            <Icons.Layers />
+                            <span>Elements ({elements.length})</span>
+                        </div>
+                        <div className="space-y-1">
+                            {elements.map(e => renderItem(e, 'element'))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        // ============================================
+        // MAIN APPLICATION
+        // ============================================
+        
+        const CableMarkupEditor = () => {
+            // PDF State
+            const [pdfData, setPdfData] = useState(null);
+            const [currentPage, setCurrentPage] = useState(0);
+            const [loading, setLoading] = useState(false);
+            const [loadingProgress, setLoadingProgress] = useState(0);
+            
+            // Canvas State
+            const [zoom, setZoom] = useState(1);
+            const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+            const [isPanning, setIsPanning] = useState(false);
+            const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+            
+            // Tool State
+            const [currentTool, setCurrentTool] = useState(OPERATIONS.SELECT);
+            const [isDrawing, setIsDrawing] = useState(false);
+            const [drawStart, setDrawStart] = useState(null);
+            const [drawEnd, setDrawEnd] = useState(null);
+            
+            // Selection State
+            const [selectedId, setSelectedId] = useState(null);
+            const [selectedType, setSelectedType] = useState(null);
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragStart, setDragStart] = useState(null);
+            
+            // Element State
+            const [snippets, setSnippets] = useState([]);
+            const [masks, setMasks] = useState([]);
+            const [elements, setElements] = useState([]);
+            
+            // UI State
+            const [showGrid, setShowGrid] = useState(true);
+            const [styles, setStyles] = useState({ ...DEFAULT_STYLES });
+            const [leftPanelTab, setLeftPanelTab] = useState('tools'); // 'tools' | 'layers'
+            
+            // Refs
+            const canvasRef = useRef(null);
+            const containerRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const exportCanvasRef = useRef(null);
+            
+            // History
+            const history = useHistory({ snippets: [], masks: [], elements: [] });
+            
+            // ============================================
+            // COMPUTED VALUES
+            // ============================================
+            
+            const currentPageData = useMemo(() => {
+                if (!pdfData || !pdfData.pages[currentPage]) return null;
+                return pdfData.pages[currentPage];
+            }, [pdfData, currentPage]);
+            
+            const selectedItem = useMemo(() => {
+                if (!selectedId) return null;
+                if (selectedType === 'snippet') return snippets.find(s => s.id === selectedId);
+                if (selectedType === 'mask') return masks.find(m => m.id === selectedId);
+                if (selectedType === 'element') return elements.find(e => e.id === selectedId);
+                return null;
+            }, [selectedId, selectedType, snippets, masks, elements]);
+            
+            // ============================================
+            // COORDINATE TRANSFORMATION
+            // ============================================
+            
+            const screenToCanvas = useCallback((screenX, screenY) => {
+                const container = containerRef.current;
+                if (!container) return { x: 0, y: 0 };
+                
+                const rect = container.getBoundingClientRect();
+                return {
+                    x: (screenX - rect.left - panOffset.x) / zoom,
+                    y: (screenY - rect.top - panOffset.y) / zoom
+                };
+            }, [zoom, panOffset]);
+            
+            // ============================================
+            // FILE HANDLING
+            // ============================================
+            
+            const handleFileLoad = async (file) => {
+                if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
+                    alert('Please select a valid PDF file');
+                    return;
+                }
+                
+                setLoading(true);
+                setLoadingProgress(0);
+                
+                try {
+                    const data = await loadPDF(file);
+                    setPdfData(data);
+                    setCurrentPage(0);
+                    setSnippets([]);
+                    setMasks([]);
+                    setElements([]);
+                    setSelectedId(null);
+                    setZoom(1);
+                    setPanOffset({ x: 0, y: 0 });
+                    
+                    // Fit to view
+                    setTimeout(() => fitToView(), 100);
+                } catch (error) {
+                    console.error('Failed to load PDF:', error);
+                    alert('Failed to load PDF. Please try another file.');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const handleDrop = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const file = e.dataTransfer.files[0];
+                if (file) handleFileLoad(file);
+            };
+            
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            };
+            
+            // ============================================
+            // VIEWPORT CONTROLS
+            // ============================================
+            
+            const fitToView = useCallback(() => {
+                if (!currentPageData || !containerRef.current) return;
+                
+                const container = containerRef.current;
+                const padding = 40;
+                const availableWidth = container.clientWidth - padding * 2;
+                const availableHeight = container.clientHeight - padding * 2;
+                
+                const scaleX = availableWidth / currentPageData.width;
+                const scaleY = availableHeight / currentPageData.height;
+                const newZoom = Math.min(scaleX, scaleY, 1);
+                
+                setZoom(newZoom);
+                setPanOffset({
+                    x: (container.clientWidth - currentPageData.width * newZoom) / 2,
+                    y: (container.clientHeight - currentPageData.height * newZoom) / 2
+                });
+            }, [currentPageData]);
+            
+            const handleWheel = useCallback((e) => {
+                e.preventDefault();
+                
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                const newZoom = clamp(zoom * delta, ZOOM_LIMITS.min, ZOOM_LIMITS.max);
+                
+                // Zoom towards mouse position
+                const container = containerRef.current;
+                const rect = container.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                const scale = newZoom / zoom;
+                const newPanX = mouseX - (mouseX - panOffset.x) * scale;
+                const newPanY = mouseY - (mouseY - panOffset.y) * scale;
+                
+                setZoom(newZoom);
+                setPanOffset({ x: newPanX, y: newPanY });
+            }, [zoom, panOffset]);
+            
+            // ============================================
+            // MOUSE HANDLERS
+            // ============================================
+            
+            const handleMouseDown = useCallback((e) => {
+                const coords = screenToCanvas(e.clientX, e.clientY);
+                
+                // Middle mouse or space+click for panning
+                if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+                    setIsPanning(true);
+                    setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+                    return;
+                }
+                
+                // Left click
+                if (e.button === 0) {
+                    switch (currentTool) {
+                        case OPERATIONS.SELECT:
+                            // Check if clicking on an element
+                            const clickedSnippet = snippets.find(s => 
+                                s.visible !== false && pointInRect(coords, { x: s.x, y: s.y, width: s.width, height: s.height })
+                            );
+                            const clickedMask = masks.find(m => 
+                                m.visible !== false && pointInRect(coords, { x: m.x, y: m.y, width: m.width, height: m.height })
+                            );
+                            
+                            if (clickedSnippet) {
+                                setSelectedId(clickedSnippet.id);
+                                setSelectedType('snippet');
+                                setIsDragging(true);
+                                setDragStart({ x: coords.x - clickedSnippet.x, y: coords.y - clickedSnippet.y });
+                            } else if (clickedMask) {
+                                setSelectedId(clickedMask.id);
+                                setSelectedType('mask');
+                                setIsDragging(true);
+                                setDragStart({ x: coords.x - clickedMask.x, y: coords.y - clickedMask.y });
+                            } else {
+                                setSelectedId(null);
+                                setSelectedType(null);
+                            }
+                            break;
+                            
+                        case OPERATIONS.SNIPPET:
+                        case OPERATIONS.MASK:
+                        case OPERATIONS.RECTANGLE:
+                        case OPERATIONS.LINE:
+                        case OPERATIONS.CIRCLE:
+                            setIsDrawing(true);
+                            setDrawStart(coords);
+                            setDrawEnd(coords);
+                            break;
+                    }
+                }
+            }, [currentTool, screenToCanvas, panOffset, snippets, masks]);
+            
+            const handleMouseMove = useCallback((e) => {
+                const coords = screenToCanvas(e.clientX, e.clientY);
+                
+                if (isPanning) {
+                    setPanOffset({
+                        x: e.clientX - panStart.x,
+                        y: e.clientY - panStart.y
+                    });
+                    return;
+                }
+                
+                if (isDragging && selectedId) {
+                    const updatePosition = (items, setItems) => {
+                        setItems(items.map(item => 
+                            item.id === selectedId
+                                ? { ...item, x: coords.x - dragStart.x, y: coords.y - dragStart.y }
+                                : item
+                        ));
+                    };
+                    
+                    if (selectedType === 'snippet') updatePosition(snippets, setSnippets);
+                    if (selectedType === 'mask') updatePosition(masks, setMasks);
+                    return;
+                }
+                
+                if (isDrawing) {
+                    setDrawEnd(coords);
+                }
+            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks]);
+            
+            const handleMouseUp = useCallback((e) => {
+                const coords = screenToCanvas(e.clientX, e.clientY);
+                
+                if (isPanning) {
+                    setIsPanning(false);
+                    return;
+                }
+                
+                if (isDragging) {
+                    setIsDragging(false);
+                    // Save to history
+                    history.push({ snippets: [...snippets], masks: [...masks], elements: [...elements] });
+                    return;
+                }
+                
+                if (isDrawing && drawStart) {
+                    const x = Math.min(drawStart.x, coords.x);
+                    const y = Math.min(drawStart.y, coords.y);
+                    const width = Math.abs(coords.x - drawStart.x);
+                    const height = Math.abs(coords.y - drawStart.y);
+                    
+                    // Minimum size check
+                    if (width >= 10 || height >= 10) {
+                        switch (currentTool) {
+                            case OPERATIONS.SNIPPET:
+                                if (currentPageData) {
+                                    // Create snippet from PDF region
+                                    const newSnippet = {
+                                        id: generateId(),
+                                        type: 'snippet',
+                                        name: `Snippet ${snippets.length + 1}`,
+                                        x: x,
+                                        y: y,
+                                        width: width,
+                                        height: height,
+                                        sourceX: x,
+                                        sourceY: y,
+                                        visible: true,
+                                        locked: false
+                                    };
+                                    setSnippets(prev => [...prev, newSnippet]);
+                                    
+                                    // Optionally create mask at source
+                                    const newMask = {
+                                        id: generateId(),
+                                        type: 'mask',
+                                        name: `Auto-mask ${masks.length + 1}`,
+                                        x: x,
+                                        y: y,
+                                        width: width,
+                                        height: height,
+                                        fill: '#ffffff',
+                                        visible: true,
+                                        locked: false
+                                    };
+                                    setMasks(prev => [...prev, newMask]);
+                                    
+                                    history.push({ 
+                                        snippets: [...snippets, newSnippet], 
+                                        masks: [...masks, newMask], 
+                                        elements 
+                                    });
+                                }
+                                break;
+                                
+                            case OPERATIONS.MASK:
+                                const newMask = {
+                                    id: generateId(),
+                                    type: 'mask',
+                                    name: `Mask ${masks.length + 1}`,
+                                    x: x,
+                                    y: y,
+                                    width: width,
+                                    height: height,
+                                    fill: '#ffffff',
+                                    visible: true,
+                                    locked: false
+                                };
+                                setMasks(prev => [...prev, newMask]);
+                                history.push({ snippets, masks: [...masks, newMask], elements });
+                                break;
+                                
+                            case OPERATIONS.RECTANGLE:
+                                const newRect = {
+                                    id: generateId(),
+                                    type: 'rectangle',
+                                    name: `Rectangle ${elements.length + 1}`,
+                                    x: x,
+                                    y: y,
+                                    width: width,
+                                    height: height,
+                                    stroke: styles.stroke,
+                                    strokeWidth: styles.strokeWidth,
+                                    fill: styles.fill,
+                                    visible: true,
+                                    locked: false
+                                };
+                                setElements(prev => [...prev, newRect]);
+                                history.push({ snippets, masks, elements: [...elements, newRect] });
+                                break;
+                                
+                            case OPERATIONS.CIRCLE:
+                                const radius = Math.max(width, height) / 2;
+                                const newCircle = {
+                                    id: generateId(),
+                                    type: 'circle',
+                                    name: `Circle ${elements.length + 1}`,
+                                    x: x + width / 2,
+                                    y: y + height / 2,
+                                    radius: radius,
+                                    stroke: styles.stroke,
+                                    strokeWidth: styles.strokeWidth,
+                                    fill: styles.fill,
+                                    visible: true,
+                                    locked: false
+                                };
+                                setElements(prev => [...prev, newCircle]);
+                                history.push({ snippets, masks, elements: [...elements, newCircle] });
+                                break;
+                                
+                            case OPERATIONS.LINE:
+                                const newLine = {
+                                    id: generateId(),
+                                    type: 'line',
+                                    name: `Line ${elements.length + 1}`,
+                                    x1: drawStart.x,
+                                    y1: drawStart.y,
+                                    x2: coords.x,
+                                    y2: coords.y,
+                                    stroke: styles.stroke,
+                                    strokeWidth: styles.strokeWidth,
+                                    visible: true,
+                                    locked: false
+                                };
+                                setElements(prev => [...prev, newLine]);
+                                history.push({ snippets, masks, elements: [...elements, newLine] });
+                                break;
+                        }
+                    }
+                    
+                    setIsDrawing(false);
+                    setDrawStart(null);
+                    setDrawEnd(null);
+                }
+            }, [isPanning, isDragging, isDrawing, drawStart, currentTool, currentPageData, snippets, masks, elements, styles, screenToCanvas, history]);
+            
+            // ============================================
+            // KEYBOARD SHORTCUTS
+            // ============================================
+            
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    // Tool shortcuts
+                    if (!e.ctrlKey && !e.metaKey) {
+                        switch (e.key.toLowerCase()) {
+                            case 'v': setCurrentTool(OPERATIONS.SELECT); break;
+                            case 's': 
+                                if (!e.ctrlKey) setCurrentTool(OPERATIONS.SNIPPET); 
+                                break;
+                            case 'm': setCurrentTool(OPERATIONS.MASK); break;
+                            case 'r': setCurrentTool(OPERATIONS.RECTANGLE); break;
+                            case 'l': setCurrentTool(OPERATIONS.LINE); break;
+                            case 'c': 
+                                if (!e.ctrlKey) setCurrentTool(OPERATIONS.CIRCLE); 
+                                break;
+                            case 'escape':
+                                setSelectedId(null);
+                                setSelectedType(null);
+                                setIsDrawing(false);
+                                break;
+                            case 'delete':
+                            case 'backspace':
+                                if (selectedId) {
+                                    if (selectedType === 'snippet') {
+                                        setSnippets(prev => prev.filter(s => s.id !== selectedId));
+                                    } else if (selectedType === 'mask') {
+                                        setMasks(prev => prev.filter(m => m.id !== selectedId));
+                                    } else if (selectedType === 'element') {
+                                        setElements(prev => prev.filter(e => e.id !== selectedId));
+                                    }
+                                    setSelectedId(null);
+                                    setSelectedType(null);
+                                }
+                                break;
+                            case '0':
+                                fitToView();
+                                break;
+                            case '1':
+                                setZoom(1);
+                                break;
+                        }
+                    }
+                    
+                    // Ctrl shortcuts
+                    if (e.ctrlKey || e.metaKey) {
+                        switch (e.key.toLowerCase()) {
+                            case 'z':
+                                if (e.shiftKey) {
+                                    if (history.canRedo) {
+                                        history.redo();
+                                        const state = history.current;
+                                        setSnippets(state.snippets);
+                                        setMasks(state.masks);
+                                        setElements(state.elements);
+                                    }
+                                } else {
+                                    if (history.canUndo) {
+                                        history.undo();
+                                        const state = history.current;
+                                        setSnippets(state.snippets);
+                                        setMasks(state.masks);
+                                        setElements(state.elements);
+                                    }
+                                }
+                                e.preventDefault();
+                                break;
+                            case 'y':
+                                if (history.canRedo) {
+                                    history.redo();
+                                    const state = history.current;
+                                    setSnippets(state.snippets);
+                                    setMasks(state.masks);
+                                    setElements(state.elements);
+                                }
+                                e.preventDefault();
+                                break;
+                            case 's':
+                                e.preventDefault();
+                                handleSaveProject();
+                                break;
+                            case 'o':
+                                e.preventDefault();
+                                fileInputRef.current?.click();
+                                break;
+                            case 'e':
+                                e.preventDefault();
+                                handleExportPDF();
+                                break;
+                        }
+                    }
+                };
+                
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [selectedId, selectedType, history, fitToView]);
+            
+            // ============================================
+            // EXPORT & SAVE
+            // ============================================
+            
+            const handleExportPDF = async () => {
+                if (!currentPageData) return;
+                
+                // Create offscreen canvas with all layers
+                const canvas = document.createElement('canvas');
+                canvas.width = currentPageData.width;
+                canvas.height = currentPageData.height;
+                const ctx = canvas.getContext('2d');
+                
+                // Draw PDF base
+                const img = new Image();
+                await new Promise(resolve => {
+                    img.onload = resolve;
+                    img.src = currentPageData.imageData;
+                });
+                ctx.drawImage(img, 0, 0);
+                
+                // Draw masks
+                masks.filter(m => m.visible !== false).forEach(mask => {
+                    ctx.fillStyle = mask.fill || '#ffffff';
+                    ctx.fillRect(mask.x, mask.y, mask.width, mask.height);
+                });
+                
+                // Draw snippets
+                // For now, snippets are visual copies from the PDF
+                // In a full implementation, we'd store the actual image data
+                
+                // Draw elements
+                elements.filter(e => e.visible !== false).forEach(element => {
+                    ctx.strokeStyle = element.stroke || '#000000';
+                    ctx.lineWidth = element.strokeWidth || 2;
+                    ctx.fillStyle = element.fill || 'transparent';
+                    
+                    switch (element.type) {
+                        case 'rectangle':
+                            if (element.fill && element.fill !== 'none') {
+                                ctx.fillRect(element.x, element.y, element.width, element.height);
+                            }
+                            ctx.strokeRect(element.x, element.y, element.width, element.height);
+                            break;
+                        case 'circle':
+                            ctx.beginPath();
+                            ctx.arc(element.x, element.y, element.radius, 0, Math.PI * 2);
+                            if (element.fill && element.fill !== 'none') {
+                                ctx.fill();
+                            }
+                            ctx.stroke();
+                            break;
+                        case 'line':
+                            ctx.beginPath();
+                            ctx.moveTo(element.x1, element.y1);
+                            ctx.lineTo(element.x2, element.y2);
+                            ctx.stroke();
+                            break;
+                    }
+                });
+                
+                exportCanvasRef.current = canvas;
+                await exportToPDF({ current: canvas }, `${pdfData?.fileName || 'markup'}-export.pdf`);
+            };
+            
+            const handleSaveProject = () => {
+                const project = {
+                    meta: {
+                        version: '1.0',
+                        created: new Date().toISOString(),
+                        name: pdfData?.fileName || 'Untitled Project'
+                    },
+                    settings: {
+                        styles: styles
+                    },
+                    pages: pdfData ? [{
+                        pageNumber: currentPage,
+                        pdfDataUrl: currentPageData?.imageData,
+                        width: currentPageData?.width,
+                        height: currentPageData?.height,
+                        snippets: snippets,
+                        masks: masks,
+                        elements: elements
+                    }] : []
+                };
+                
+                const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${pdfData?.fileName || 'project'}.cme`;
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+            
+            const handleLoadProject = async (file) => {
+                try {
+                    const text = await file.text();
+                    const project = JSON.parse(text);
+                    
+                    if (project.pages && project.pages[0]) {
+                        const page = project.pages[0];
+                        setPdfData({
+                            fileName: project.meta?.name || 'Loaded Project',
+                            pageCount: 1,
+                            pages: [{
+                                pageNumber: 0,
+                                width: page.width,
+                                height: page.height,
+                                imageData: page.pdfDataUrl,
+                                elements: [],
+                                masks: [],
+                                snippets: []
+                            }]
+                        });
+                        setSnippets(page.snippets || []);
+                        setMasks(page.masks || []);
+                        setElements(page.elements || []);
+                        setStyles(project.settings?.styles || DEFAULT_STYLES);
+                        setCurrentPage(0);
+                        setTimeout(() => fitToView(), 100);
+                    }
+                } catch (error) {
+                    console.error('Failed to load project:', error);
+                    alert('Failed to load project file');
+                }
+            };
+            
+            // ============================================
+            // ITEM MANAGEMENT
+            // ============================================
+            
+            const handleSelectItem = (item, type) => {
+                setSelectedId(item.id);
+                setSelectedType(type);
+            };
+            
+            const handleDeleteItem = (id, type) => {
+                if (type === 'snippet') setSnippets(prev => prev.filter(s => s.id !== id));
+                if (type === 'mask') setMasks(prev => prev.filter(m => m.id !== id));
+                if (type === 'element') setElements(prev => prev.filter(e => e.id !== id));
+                
+                if (selectedId === id) {
+                    setSelectedId(null);
+                    setSelectedType(null);
+                }
+            };
+            
+            const handleToggleVisibility = (id, type) => {
+                const updateVisibility = (items, setItems) => {
+                    setItems(items.map(item => 
+                        item.id === id ? { ...item, visible: item.visible === false ? true : false } : item
+                    ));
+                };
+                
+                if (type === 'snippet') updateVisibility(snippets, setSnippets);
+                if (type === 'mask') updateVisibility(masks, setMasks);
+                if (type === 'element') updateVisibility(elements, setElements);
+            };
+            
+            const handleUpdateSelected = (updates) => {
+                if (!selectedId) return;
+                
+                if (selectedType === 'snippet') {
+                    setSnippets(prev => prev.map(s => s.id === selectedId ? { ...s, ...updates } : s));
+                } else if (selectedType === 'mask') {
+                    setMasks(prev => prev.map(m => m.id === selectedId ? { ...m, ...updates } : m));
+                } else if (selectedType === 'element') {
+                    setElements(prev => prev.map(e => e.id === selectedId ? { ...e, ...updates } : e));
+                }
+            };
+            
+            // ============================================
+            // RENDER
+            // ============================================
+            
+            return (
+                <div className="h-screen flex flex-col bg-editor-bg">
+                    {/* Header / Menu Bar */}
+                    <header className="h-12 bg-panel-bg border-b border-panel-border flex items-center px-4 gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-accent rounded flex items-center justify-center">
+                                <span className="text-white font-bold text-sm">CM</span>
+                            </div>
+                            <span className="text-white font-semibold">Cable Markup Editor</span>
+                        </div>
+                        
+                        <div className="h-6 w-px bg-panel-border" />
+                        
+                        {/* File Menu */}
+                        <div className="flex items-center gap-1">
+                            <button
+                                className="px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 rounded flex items-center gap-2"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <div className="w-4 h-4"><Icons.Folder /></div>
+                                Open PDF
+                            </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pdf,.cme"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        if (file.name.endsWith('.cme')) {
+                                            handleLoadProject(file);
+                                        } else {
+                                            handleFileLoad(file);
+                                        }
+                                    }
+                                    e.target.value = '';
+                                }}
+                            />
+                            <button
+                                className="px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 rounded flex items-center gap-2"
+                                onClick={handleSaveProject}
+                                disabled={!pdfData}
+                            >
+                                <div className="w-4 h-4"><Icons.Save /></div>
+                                Save
+                            </button>
+                        </div>
+                        
+                        <div className="h-6 w-px bg-panel-border" />
+                        
+                        {/* Undo/Redo */}
+                        <div className="flex items-center gap-1">
+                            <button
+                                className={`p-2 rounded ${history.canUndo ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600'}`}
+                                onClick={() => {
+                                    if (history.canUndo) {
+                                        history.undo();
+                                        const state = history.current;
+                                        setSnippets(state.snippets);
+                                        setMasks(state.masks);
+                                        setElements(state.elements);
+                                    }
+                                }}
+                                disabled={!history.canUndo}
+                            >
+                                <div className="w-4 h-4"><Icons.Undo /></div>
+                            </button>
+                            <button
+                                className={`p-2 rounded ${history.canRedo ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600'}`}
+                                onClick={() => {
+                                    if (history.canRedo) {
+                                        history.redo();
+                                        const state = history.current;
+                                        setSnippets(state.snippets);
+                                        setMasks(state.masks);
+                                        setElements(state.elements);
+                                    }
+                                }}
+                                disabled={!history.canRedo}
+                            >
+                                <div className="w-4 h-4"><Icons.Redo /></div>
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1" />
+                        
+                        {/* Export */}
+                        <div className="flex items-center gap-2">
+                            <button
+                                className="px-3 py-1.5 text-sm bg-accent text-white hover:bg-accent-hover rounded flex items-center gap-2"
+                                onClick={handleExportPDF}
+                                disabled={!pdfData}
+                            >
+                                <div className="w-4 h-4"><Icons.Download /></div>
+                                Export PDF
+                            </button>
+                        </div>
+                    </header>
+                    
+                    {/* Main Content */}
+                    <div className="flex-1 flex overflow-hidden">
+                        {/* Left Panel - Tools */}
+                        <aside className="w-56 bg-panel-bg border-r border-panel-border flex flex-col">
+                            {/* Panel Tabs */}
+                            <div className="flex border-b border-panel-border">
+                                <button
+                                    className={`flex-1 py-2 text-sm ${leftPanelTab === 'tools' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}
+                                    onClick={() => setLeftPanelTab('tools')}
+                                >
+                                    Tools
+                                </button>
+                                <button
+                                    className={`flex-1 py-2 text-sm ${leftPanelTab === 'layers' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}
+                                    onClick={() => setLeftPanelTab('layers')}
+                                >
+                                    Layers
+                                </button>
+                            </div>
+                            
+                            {leftPanelTab === 'tools' ? (
+                                <div className="p-3 space-y-4 overflow-y-auto">
+                                    {/* Selection Tools */}
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Selection</div>
+                                        <div className="grid grid-cols-4 gap-1">
+                                            <ToolButton
+                                                icon={Icons.Cursor}
+                                                label="Select"
+                                                shortcut="V"
+                                                active={currentTool === OPERATIONS.SELECT}
+                                                onClick={() => setCurrentTool(OPERATIONS.SELECT)}
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Markup Tools */}
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Markup</div>
+                                        <div className="grid grid-cols-4 gap-1">
+                                            <ToolButton
+                                                icon={Icons.Scissors}
+                                                label="Snippet"
+                                                shortcut="S"
+                                                active={currentTool === OPERATIONS.SNIPPET}
+                                                onClick={() => setCurrentTool(OPERATIONS.SNIPPET)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Mask}
+                                                label="Mask"
+                                                shortcut="M"
+                                                active={currentTool === OPERATIONS.MASK}
+                                                onClick={() => setCurrentTool(OPERATIONS.MASK)}
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Shape Tools */}
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Shapes</div>
+                                        <div className="grid grid-cols-4 gap-1">
+                                            <ToolButton
+                                                icon={Icons.Line}
+                                                label="Line"
+                                                shortcut="L"
+                                                active={currentTool === OPERATIONS.LINE}
+                                                onClick={() => setCurrentTool(OPERATIONS.LINE)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Square}
+                                                label="Rectangle"
+                                                shortcut="R"
+                                                active={currentTool === OPERATIONS.RECTANGLE}
+                                                onClick={() => setCurrentTool(OPERATIONS.RECTANGLE)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Circle}
+                                                label="Circle"
+                                                shortcut="C"
+                                                active={currentTool === OPERATIONS.CIRCLE}
+                                                onClick={() => setCurrentTool(OPERATIONS.CIRCLE)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Arrow}
+                                                label="Arrow"
+                                                shortcut="A"
+                                                active={currentTool === OPERATIONS.ARROW}
+                                                onClick={() => setCurrentTool(OPERATIONS.ARROW)}
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Annotation Tools */}
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Annotation</div>
+                                        <div className="grid grid-cols-4 gap-1">
+                                            <ToolButton
+                                                icon={Icons.Type}
+                                                label="Text"
+                                                shortcut="T"
+                                                active={currentTool === OPERATIONS.TEXT}
+                                                onClick={() => setCurrentTool(OPERATIONS.TEXT)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Ruler}
+                                                label="Dimension"
+                                                shortcut="D"
+                                                active={currentTool === OPERATIONS.DIMENSION}
+                                                onClick={() => setCurrentTool(OPERATIONS.DIMENSION)}
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* View Controls */}
+                                    <div className="pt-2 border-t border-panel-border">
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">View</div>
+                                        <div className="grid grid-cols-4 gap-1">
+                                            <ToolButton
+                                                icon={Icons.ZoomIn}
+                                                label="Zoom In"
+                                                onClick={() => setZoom(prev => clamp(prev * 1.2, ZOOM_LIMITS.min, ZOOM_LIMITS.max))}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.ZoomOut}
+                                                label="Zoom Out"
+                                                onClick={() => setZoom(prev => clamp(prev / 1.2, ZOOM_LIMITS.min, ZOOM_LIMITS.max))}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Fit}
+                                                label="Fit to View"
+                                                shortcut="0"
+                                                onClick={fitToView}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Grid}
+                                                label="Toggle Grid"
+                                                active={showGrid}
+                                                onClick={() => setShowGrid(prev => !prev)}
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Style Settings */}
+                                    <div className="pt-2 border-t border-panel-border">
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Style</div>
+                                        <div className="space-y-2 px-1">
+                                            <div className="flex items-center gap-2">
+                                                <label className="text-xs text-gray-400 w-14">Stroke</label>
+                                                <input
+                                                    type="color"
+                                                    value={styles.stroke}
+                                                    onChange={(e) => setStyles(prev => ({ ...prev, stroke: e.target.value }))}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    value={styles.strokeWidth}
+                                                    onChange={(e) => setStyles(prev => ({ ...prev, strokeWidth: parseFloat(e.target.value) }))}
+                                                    className="w-12"
+                                                    min="1"
+                                                    max="20"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <label className="text-xs text-gray-400 w-14">Fill</label>
+                                                <input
+                                                    type="color"
+                                                    value={styles.fill === 'none' ? '#ffffff' : styles.fill}
+                                                    onChange={(e) => setStyles(prev => ({ ...prev, fill: e.target.value }))}
+                                                    disabled={styles.fill === 'none'}
+                                                />
+                                                <button
+                                                    className={`px-2 py-0.5 text-xs rounded ${styles.fill === 'none' ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300'}`}
+                                                    onClick={() => setStyles(prev => ({ ...prev, fill: prev.fill === 'none' ? '#ffffff' : 'none' }))}
+                                                >
+                                                    None
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex-1 overflow-y-auto">
+                                    <LayerPanel
+                                        snippets={snippets}
+                                        masks={masks}
+                                        elements={elements}
+                                        selectedId={selectedId}
+                                        onSelectItem={handleSelectItem}
+                                        onDeleteItem={handleDeleteItem}
+                                        onToggleVisibility={handleToggleVisibility}
+                                    />
+                                </div>
+                            )}
+                        </aside>
+                        
+                        {/* Canvas Area */}
+                        <main className="flex-1 flex flex-col overflow-hidden">
+                            {/* Canvas Container */}
+                            <div
+                                ref={containerRef}
+                                className={`flex-1 canvas-container overflow-hidden cursor-${isPanning ? 'grabbing' : currentTool === OPERATIONS.SELECT ? 'default' : 'crosshair'} drop-zone`}
+                                onMouseDown={handleMouseDown}
+                                onMouseMove={handleMouseMove}
+                                onMouseUp={handleMouseUp}
+                                onMouseLeave={handleMouseUp}
+                                onWheel={handleWheel}
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                            >
+                                {loading ? (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="text-center">
+                                            <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full spinner mx-auto mb-4" />
+                                            <div className="text-gray-400">Loading PDF...</div>
+                                        </div>
+                                    </div>
+                                ) : !pdfData ? (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div 
+                                            className="text-center p-8 border-2 border-dashed border-gray-600 rounded-xl hover:border-accent transition-colors cursor-pointer"
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            <div className="w-16 h-16 mx-auto mb-4 text-gray-500">
+                                                <Icons.Upload />
+                                            </div>
+                                            <div className="text-xl text-gray-300 mb-2">Drop PDF here</div>
+                                            <div className="text-sm text-gray-500">or click to browse</div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div
+                                        style={{
+                                            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
+                                            transformOrigin: '0 0',
+                                            position: 'relative',
+                                            width: currentPageData?.width || 0,
+                                            height: currentPageData?.height || 0
+                                        }}
+                                    >
+                                        {/* PDF Base Layer */}
+                                        {currentPageData && (
+                                            <img
+                                                src={currentPageData.imageData}
+                                                alt="PDF Page"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: currentPageData.width,
+                                                    height: currentPageData.height,
+                                                    zIndex: LAYERS.PDF_BASE
+                                                }}
+                                                draggable={false}
+                                            />
+                                        )}
+                                        
+                                        {/* SVG Overlay for all drawn elements */}
+                                        <svg
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: currentPageData?.width || 0,
+                                                height: currentPageData?.height || 0,
+                                                zIndex: LAYERS.ELEMENTS,
+                                                pointerEvents: 'none'
+                                            }}
+                                        >
+                                            {/* Grid */}
+                                            {showGrid && currentPageData && (
+                                                <g opacity="0.3">
+                                                    {Array.from({ length: Math.ceil(currentPageData.width / GRID_SIZE) + 1 }).map((_, i) => (
+                                                        <line
+                                                            key={`v-${i}`}
+                                                            x1={i * GRID_SIZE}
+                                                            y1={0}
+                                                            x2={i * GRID_SIZE}
+                                                            y2={currentPageData.height}
+                                                            stroke="#404040"
+                                                            strokeWidth={0.5 / zoom}
+                                                        />
+                                                    ))}
+                                                    {Array.from({ length: Math.ceil(currentPageData.height / GRID_SIZE) + 1 }).map((_, i) => (
+                                                        <line
+                                                            key={`h-${i}`}
+                                                            x1={0}
+                                                            y1={i * GRID_SIZE}
+                                                            x2={currentPageData.width}
+                                                            y2={i * GRID_SIZE}
+                                                            stroke="#404040"
+                                                            strokeWidth={0.5 / zoom}
+                                                        />
+                                                    ))}
+                                                </g>
+                                            )}
+                                            
+                                            {/* Masks */}
+                                            {masks.filter(m => m.visible !== false).map(mask => (
+                                                <rect
+                                                    key={mask.id}
+                                                    x={mask.x}
+                                                    y={mask.y}
+                                                    width={mask.width}
+                                                    height={mask.height}
+                                                    fill={mask.fill || '#ffffff'}
+                                                    stroke={selectedId === mask.id ? '#0ea5e9' : 'none'}
+                                                    strokeWidth={selectedId === mask.id ? 2 / zoom : 0}
+                                                    strokeDasharray={selectedId === mask.id ? `${4 / zoom}` : 'none'}
+                                                    style={{ zIndex: LAYERS.MASKS }}
+                                                />
+                                            ))}
+                                            
+                                            {/* Elements */}
+                                            {elements.filter(e => e.visible !== false).map(element => {
+                                                const isSelected = selectedId === element.id;
+                                                
+                                                switch (element.type) {
+                                                    case 'rectangle':
+                                                        return (
+                                                            <g key={element.id}>
+                                                                <rect
+                                                                    x={element.x}
+                                                                    y={element.y}
+                                                                    width={element.width}
+                                                                    height={element.height}
+                                                                    fill={element.fill === 'none' ? 'transparent' : element.fill}
+                                                                    stroke={element.stroke}
+                                                                    strokeWidth={element.strokeWidth}
+                                                                />
+                                                                {isSelected && (
+                                                                    <rect
+                                                                        x={element.x - 2}
+                                                                        y={element.y - 2}
+                                                                        width={element.width + 4}
+                                                                        height={element.height + 4}
+                                                                        fill="none"
+                                                                        stroke="#0ea5e9"
+                                                                        strokeWidth={2 / zoom}
+                                                                        strokeDasharray={`${4 / zoom}`}
+                                                                    />
+                                                                )}
+                                                            </g>
+                                                        );
+                                                    case 'circle':
+                                                        return (
+                                                            <g key={element.id}>
+                                                                <circle
+                                                                    cx={element.x}
+                                                                    cy={element.y}
+                                                                    r={element.radius}
+                                                                    fill={element.fill === 'none' ? 'transparent' : element.fill}
+                                                                    stroke={element.stroke}
+                                                                    strokeWidth={element.strokeWidth}
+                                                                />
+                                                                {isSelected && (
+                                                                    <circle
+                                                                        cx={element.x}
+                                                                        cy={element.y}
+                                                                        r={element.radius + 3}
+                                                                        fill="none"
+                                                                        stroke="#0ea5e9"
+                                                                        strokeWidth={2 / zoom}
+                                                                        strokeDasharray={`${4 / zoom}`}
+                                                                    />
+                                                                )}
+                                                            </g>
+                                                        );
+                                                    case 'line':
+                                                        return (
+                                                            <g key={element.id}>
+                                                                <line
+                                                                    x1={element.x1}
+                                                                    y1={element.y1}
+                                                                    x2={element.x2}
+                                                                    y2={element.y2}
+                                                                    stroke={element.stroke}
+                                                                    strokeWidth={element.strokeWidth}
+                                                                />
+                                                                {isSelected && (
+                                                                    <>
+                                                                        <circle cx={element.x1} cy={element.y1} r={4 / zoom} fill="#0ea5e9" />
+                                                                        <circle cx={element.x2} cy={element.y2} r={4 / zoom} fill="#0ea5e9" />
+                                                                    </>
+                                                                )}
+                                                            </g>
+                                                        );
+                                                    default:
+                                                        return null;
+                                                }
+                                            })}
+                                            
+                                            {/* Drawing preview */}
+                                            {isDrawing && drawStart && drawEnd && (
+                                                <g>
+                                                    {currentTool === OPERATIONS.SNIPPET && (
+                                                        <rect
+                                                            x={Math.min(drawStart.x, drawEnd.x)}
+                                                            y={Math.min(drawStart.y, drawEnd.y)}
+                                                            width={Math.abs(drawEnd.x - drawStart.x)}
+                                                            height={Math.abs(drawEnd.y - drawStart.y)}
+                                                            fill="rgba(14, 165, 233, 0.2)"
+                                                            stroke="#0ea5e9"
+                                                            strokeWidth={2 / zoom}
+                                                            strokeDasharray={`${6 / zoom}`}
+                                                        />
+                                                    )}
+                                                    {currentTool === OPERATIONS.MASK && (
+                                                        <rect
+                                                            x={Math.min(drawStart.x, drawEnd.x)}
+                                                            y={Math.min(drawStart.y, drawEnd.y)}
+                                                            width={Math.abs(drawEnd.x - drawStart.x)}
+                                                            height={Math.abs(drawEnd.y - drawStart.y)}
+                                                            fill="rgba(255, 255, 255, 0.8)"
+                                                            stroke="#999"
+                                                            strokeWidth={1 / zoom}
+                                                        />
+                                                    )}
+                                                    {currentTool === OPERATIONS.RECTANGLE && (
+                                                        <rect
+                                                            x={Math.min(drawStart.x, drawEnd.x)}
+                                                            y={Math.min(drawStart.y, drawEnd.y)}
+                                                            width={Math.abs(drawEnd.x - drawStart.x)}
+                                                            height={Math.abs(drawEnd.y - drawStart.y)}
+                                                            fill={styles.fill === 'none' ? 'transparent' : styles.fill}
+                                                            stroke={styles.stroke}
+                                                            strokeWidth={styles.strokeWidth}
+                                                        />
+                                                    )}
+                                                    {currentTool === OPERATIONS.CIRCLE && (
+                                                        <circle
+                                                            cx={Math.min(drawStart.x, drawEnd.x) + Math.abs(drawEnd.x - drawStart.x) / 2}
+                                                            cy={Math.min(drawStart.y, drawEnd.y) + Math.abs(drawEnd.y - drawStart.y) / 2}
+                                                            r={Math.max(Math.abs(drawEnd.x - drawStart.x), Math.abs(drawEnd.y - drawStart.y)) / 2}
+                                                            fill={styles.fill === 'none' ? 'transparent' : styles.fill}
+                                                            stroke={styles.stroke}
+                                                            strokeWidth={styles.strokeWidth}
+                                                        />
+                                                    )}
+                                                    {currentTool === OPERATIONS.LINE && (
+                                                        <line
+                                                            x1={drawStart.x}
+                                                            y1={drawStart.y}
+                                                            x2={drawEnd.x}
+                                                            y2={drawEnd.y}
+                                                            stroke={styles.stroke}
+                                                            strokeWidth={styles.strokeWidth}
+                                                        />
+                                                    )}
+                                                </g>
+                                            )}
+                                        </svg>
+                                        
+                                        {/* Snippet overlays (positioned divs for drag interaction) */}
+                                        {snippets.filter(s => s.visible !== false).map(snippet => (
+                                            <div
+                                                key={snippet.id}
+                                                className={`absolute snippet-overlay ${selectedId === snippet.id ? 'ring-2 ring-accent ring-offset-2 ring-offset-transparent' : ''}`}
+                                                style={{
+                                                    left: snippet.x,
+                                                    top: snippet.y,
+                                                    width: snippet.width,
+                                                    height: snippet.height,
+                                                    zIndex: LAYERS.SNIPPETS,
+                                                    cursor: currentTool === OPERATIONS.SELECT ? 'move' : 'default',
+                                                    pointerEvents: currentTool === OPERATIONS.SELECT ? 'auto' : 'none',
+                                                    border: `2px dashed ${selectedId === snippet.id ? '#0ea5e9' : '#666'}`,
+                                                    background: 'rgba(14, 165, 233, 0.1)'
+                                                }}
+                                            >
+                                                <div className="absolute -top-6 left-0 text-xs bg-accent text-white px-2 py-0.5 rounded whitespace-nowrap">
+                                                    {snippet.name}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Status Bar */}
+                            <footer className="h-8 bg-panel-bg border-t border-panel-border flex items-center px-4 text-xs text-gray-400 gap-6">
+                                <span className="mono">Zoom: {Math.round(zoom * 100)}%</span>
+                                {pdfData && (
+                                    <>
+                                        <span>Page: {currentPage + 1} / {pdfData.pageCount}</span>
+                                        <span>Size: {currentPageData?.width} × {currentPageData?.height}</span>
+                                    </>
+                                )}
+                                <span>Tool: {currentTool}</span>
+                                <div className="flex-1" />
+                                <span>Snippets: {snippets.length}</span>
+                                <span>Masks: {masks.length}</span>
+                                <span>Elements: {elements.length}</span>
+                            </footer>
+                        </main>
+                        
+                        {/* Right Panel - Properties */}
+                        <aside className="w-56 bg-panel-bg border-l border-panel-border">
+                            <div className="p-3 border-b border-panel-border">
+                                <h3 className="text-sm font-medium text-gray-300">Properties</h3>
+                            </div>
+                            <PropertiesPanel
+                                selection={selectedItem}
+                                onUpdate={handleUpdateSelected}
+                                styles={styles}
+                                onStyleChange={(updates) => setStyles(prev => ({ ...prev, ...updates }))}
+                            />
+                            
+                            {/* Page Navigation */}
+                            {pdfData && pdfData.pageCount > 1 && (
+                                <div className="p-3 border-t border-panel-border">
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Pages</div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            className="page-nav-btn p-2 bg-gray-700 rounded"
+                                            onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                            disabled={currentPage === 0}
+                                        >
+                                            <div className="w-4 h-4"><Icons.ChevronLeft /></div>
+                                        </button>
+                                        <span className="flex-1 text-center text-sm">
+                                            {currentPage + 1} / {pdfData.pageCount}
+                                        </span>
+                                        <button
+                                            className="page-nav-btn p-2 bg-gray-700 rounded"
+                                            onClick={() => setCurrentPage(prev => Math.min(pdfData.pageCount - 1, prev + 1))}
+                                            disabled={currentPage === pdfData.pageCount - 1}
+                                        >
+                                            <div className="w-4 h-4"><Icons.ChevronRight /></div>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Keyboard Shortcuts Reference */}
+                            <div className="p-3 border-t border-panel-border">
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Shortcuts</div>
+                                <div className="space-y-1 text-xs text-gray-400">
+                                    <div className="flex justify-between"><span>V</span><span>Select</span></div>
+                                    <div className="flex justify-between"><span>S</span><span>Snippet</span></div>
+                                    <div className="flex justify-between"><span>M</span><span>Mask</span></div>
+                                    <div className="flex justify-between"><span>R</span><span>Rectangle</span></div>
+                                    <div className="flex justify-between"><span>L</span><span>Line</span></div>
+                                    <div className="flex justify-between"><span>C</span><span>Circle</span></div>
+                                    <div className="flex justify-between"><span>0</span><span>Fit View</span></div>
+                                    <div className="flex justify-between"><span>Del</span><span>Delete</span></div>
+                                    <div className="flex justify-between"><span>Ctrl+Z</span><span>Undo</span></div>
+                                    <div className="flex justify-between"><span>Ctrl+S</span><span>Save</span></div>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+            );
+        };
+        
+        // ============================================
+        // MOUNT APPLICATION
+        // ============================================
+        
+        ReactDOM.render(<CableMarkupEditor />, document.getElementById('root'));
+    </script>
+</body>
+</html>
