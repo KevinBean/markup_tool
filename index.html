@@ -1010,6 +1010,22 @@
                         </div>
                     )}
 
+                    {/* Snippet-specific options */}
+                    {selection.type === 'snippet' && (
+                        <div className="space-y-2 pt-2 border-t border-panel-border">
+                            <div className="text-xs text-gray-500">Display Options</div>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selection.hideBorder || false}
+                                    onChange={(e) => onUpdate({ hideBorder: e.target.checked })}
+                                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-accent focus:ring-accent"
+                                />
+                                <span className="text-xs text-gray-300">Hide border when not selected</span>
+                            </label>
+                        </div>
+                    )}
+
                     {/* Info Point specific fields */}
                     {isInfoPoint && (
                         <>
@@ -2413,7 +2429,8 @@
                                             sourceHeight: height,
                                             imageData: imageData,
                                             visible: true,
-                                            locked: false
+                                            locked: false,
+                                            hideBorder: false
                                         };
                                         setSnippets(prev => [...prev, newSnippet]);
 
@@ -3575,10 +3592,13 @@
                                         </svg>
                                         
                                         {/* Snippet overlays (positioned divs for drag interaction) */}
-                                        {snippets.filter(s => s.visible !== false).map(snippet => (
+                                        {snippets.filter(s => s.visible !== false).map(snippet => {
+                                            const isSelected = selectedId === snippet.id;
+                                            const showBorder = isSelected || !snippet.hideBorder;
+                                            return (
                                             <div
                                                 key={snippet.id}
-                                                className={`absolute snippet-overlay ${selectedId === snippet.id ? 'ring-2 ring-accent ring-offset-2 ring-offset-transparent' : ''}`}
+                                                className={`absolute ${showBorder ? 'snippet-overlay' : ''} ${isSelected ? 'ring-2 ring-accent ring-offset-2 ring-offset-transparent' : ''}`}
                                                 style={{
                                                     left: snippet.x,
                                                     top: snippet.y,
@@ -3587,7 +3607,7 @@
                                                     zIndex: LAYERS.SNIPPETS,
                                                     cursor: currentTool === OPERATIONS.SELECT ? 'move' : 'default',
                                                     pointerEvents: currentTool === OPERATIONS.SELECT ? 'auto' : 'none',
-                                                    border: `2px dashed ${selectedId === snippet.id ? '#0ea5e9' : '#666'}`,
+                                                    border: showBorder ? `2px dashed ${isSelected ? '#0ea5e9' : '#666'}` : 'none',
                                                     overflow: 'hidden'
                                                 }}
                                             >
@@ -3622,7 +3642,7 @@
                                                     {snippet.name}
                                                 </div>
                                             </div>
-                                        ))}
+                                        );})}
                                     </div>
                                 )}
                             </div>
