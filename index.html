@@ -279,7 +279,22 @@
         const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
         
         const distance = (p1, p2) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-        
+
+        const pointToLineDistance = (point, x1, y1, x2, y2) => {
+            const A = point.x - x1;
+            const B = point.y - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+            const dot = A * C + B * D;
+            const lenSq = C * C + D * D;
+            let param = lenSq !== 0 ? dot / lenSq : -1;
+            let xx, yy;
+            if (param < 0) { xx = x1; yy = y1; }
+            else if (param > 1) { xx = x2; yy = y2; }
+            else { xx = x1 + param * C; yy = y1 + param * D; }
+            return Math.sqrt(Math.pow(point.x - xx, 2) + Math.pow(point.y - yy, 2));
+        };
+
         const debounce = (func, delay) => {
             let timeoutId;
             return (...args) => {
@@ -702,30 +717,80 @@
                         />
                     </div>
 
-                    {/* Position */}
-                    <div className="space-y-2">
-                        <div className="text-xs text-gray-500">Position</div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="text-xs text-gray-400">X</label>
-                                <input
-                                    type="number"
-                                    value={Math.round(selection.x || 0)}
-                                    onChange={(e) => onUpdate({ x: parseFloat(e.target.value) })}
-                                    className="w-full"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-400">Y</label>
-                                <input
-                                    type="number"
-                                    value={Math.round(selection.y || 0)}
-                                    onChange={(e) => onUpdate({ y: parseFloat(e.target.value) })}
-                                    className="w-full"
-                                />
+                    {/* Position - for elements with x, y */}
+                    {selection.type !== 'line' && (
+                        <div className="space-y-2">
+                            <div className="text-xs text-gray-500">Position</div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-400">X</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.x || 0)}
+                                        onChange={(e) => onUpdate({ x: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400">Y</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.y || 0)}
+                                        onChange={(e) => onUpdate({ y: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* Line endpoints */}
+                    {selection.type === 'line' && (
+                        <div className="space-y-2">
+                            <div className="text-xs text-gray-500">Start Point</div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-400">X1</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.x1 || 0)}
+                                        onChange={(e) => onUpdate({ x1: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400">Y1</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.y1 || 0)}
+                                        onChange={(e) => onUpdate({ y1: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-2">End Point</div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-400">X2</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.x2 || 0)}
+                                        onChange={(e) => onUpdate({ x2: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400">Y2</label>
+                                    <input
+                                        type="number"
+                                        value={Math.round(selection.y2 || 0)}
+                                        onChange={(e) => onUpdate({ y2: parseFloat(e.target.value) })}
+                                        className="w-full"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Size - for non-info-point elements */}
                     {(selection.width !== undefined) && (
@@ -1245,12 +1310,34 @@
                             const clickedInfoPoint = infoPoints.find(p =>
                                 p.visible !== false && distance(coords, { x: p.x, y: p.y }) <= 15
                             );
+                            // Check elements (shapes: rectangle, circle, line)
+                            const clickedElement = elements.find(el => {
+                                if (el.visible === false) return false;
+                                if (el.type === 'rectangle') {
+                                    return pointInRect(coords, { x: el.x, y: el.y, width: el.width, height: el.height });
+                                } else if (el.type === 'circle') {
+                                    return distance(coords, { x: el.x, y: el.y }) <= el.radius;
+                                } else if (el.type === 'line') {
+                                    return pointToLineDistance(coords, el.x1, el.y1, el.x2, el.y2) <= 8;
+                                }
+                                return false;
+                            });
 
                             if (clickedInfoPoint) {
                                 setSelectedId(clickedInfoPoint.id);
                                 setSelectedType('infoPoint');
                                 setIsDragging(true);
                                 setDragStart({ x: coords.x - clickedInfoPoint.x, y: coords.y - clickedInfoPoint.y });
+                            } else if (clickedElement) {
+                                setSelectedId(clickedElement.id);
+                                setSelectedType('element');
+                                setIsDragging(true);
+                                // For lines, use x1,y1 as the anchor point
+                                if (clickedElement.type === 'line') {
+                                    setDragStart({ x: coords.x - clickedElement.x1, y: coords.y - clickedElement.y1 });
+                                } else {
+                                    setDragStart({ x: coords.x - clickedElement.x, y: coords.y - clickedElement.y });
+                                }
                             } else if (clickedSnippet) {
                                 setSelectedId(clickedSnippet.id);
                                 setSelectedType('snippet');
@@ -1325,13 +1412,25 @@
                     if (selectedType === 'snippet') updatePosition(snippets, setSnippets);
                     if (selectedType === 'mask') updatePosition(masks, setMasks);
                     if (selectedType === 'infoPoint') updatePosition(infoPoints, setInfoPoints);
+                    if (selectedType === 'element') {
+                        setElements(elements.map(el => {
+                            if (el.id !== selectedId) return el;
+                            if (el.type === 'line') {
+                                // Move both line endpoints
+                                const dx = coords.x - dragStart.x - el.x1;
+                                const dy = coords.y - dragStart.y - el.y1;
+                                return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
+                            }
+                            return { ...el, x: coords.x - dragStart.x, y: coords.y - dragStart.y };
+                        }));
+                    }
                     return;
                 }
 
                 if (isDrawing) {
                     setDrawEnd(coords);
                 }
-            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints]);
+            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints, elements]);
             
             const handleMouseUp = useCallback((e) => {
                 const coords = screenToCanvas(e.clientX, e.clientY);
