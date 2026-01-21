@@ -328,12 +328,30 @@
         };
         
         const pointInRect = (point, rect) => {
-            return point.x >= rect.x && 
+            return point.x >= rect.x &&
                    point.x <= rect.x + rect.width &&
-                   point.y >= rect.y && 
+                   point.y >= rect.y &&
                    point.y <= rect.y + rect.height;
         };
-        
+
+        // Capture a region from an image source as base64 data URL
+        const captureRegion = async (imageSource, x, y, width, height) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    // Draw the cropped region
+                    ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.onerror = () => resolve(null);
+                img.src = imageSource;
+            });
+        };
+
         // ============================================
         // ICONS
         // ============================================
@@ -1455,32 +1473,48 @@
                                 No saved snippets yet. Select a snippet and save it to the library.
                             </div>
                         ) : (
-                            <div className="space-y-1 max-h-60 overflow-y-auto">
+                            <div className="space-y-2 max-h-80 overflow-y-auto">
                                 {library.map((item, index) => (
                                     <div
                                         key={item.id || index}
-                                        className="flex items-center gap-2 p-2 bg-gray-800 rounded hover:bg-gray-700 group"
+                                        className="p-2 bg-gray-800 rounded hover:bg-gray-700 group"
                                     >
-                                        <div className="flex-1 min-w-0">
-                                            <div className="text-sm text-white truncate">{item.libraryName}</div>
-                                            <div className="text-xs text-gray-500">
-                                                {item.width}x{item.height}px
+                                        {/* Thumbnail preview */}
+                                        {item.imageData && (
+                                            <div className="mb-2 border border-gray-600 rounded overflow-hidden bg-gray-900">
+                                                <img
+                                                    src={item.imageData}
+                                                    alt={item.libraryName}
+                                                    style={{
+                                                        width: '100%',
+                                                        maxHeight: '80px',
+                                                        objectFit: 'contain'
+                                                    }}
+                                                />
                                             </div>
+                                        )}
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm text-white truncate">{item.libraryName}</div>
+                                                <div className="text-xs text-gray-500">
+                                                    {item.width}x{item.height}px
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => onInsertSnippet(item)}
+                                                className="px-2 py-1 text-xs bg-accent text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Insert into document"
+                                            >
+                                                Insert
+                                            </button>
+                                            <button
+                                                onClick={() => onDeleteFromLibrary(index)}
+                                                className="w-5 h-5 text-gray-400 hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Remove from library"
+                                            >
+                                                <Icons.Trash />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => onInsertSnippet(item)}
-                                            className="px-2 py-1 text-xs bg-accent text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                            title="Insert into document"
-                                        >
-                                            Insert
-                                        </button>
-                                        <button
-                                            onClick={() => onDeleteFromLibrary(index)}
-                                            className="w-5 h-5 text-gray-400 hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
-                                            title="Remove from library"
-                                        >
-                                            <Icons.Trash />
-                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -1831,42 +1865,48 @@
                         switch (currentTool) {
                             case OPERATIONS.SNIPPET:
                                 if (currentPageData) {
-                                    // Create snippet from PDF region
-                                    const newSnippet = {
-                                        id: generateId(),
-                                        type: 'snippet',
-                                        name: `Snippet ${snippets.length + 1}`,
-                                        x: x,
-                                        y: y,
-                                        width: width,
-                                        height: height,
-                                        sourceX: x,
-                                        sourceY: y,
-                                        visible: true,
-                                        locked: false
-                                    };
-                                    setSnippets(prev => [...prev, newSnippet]);
-                                    
-                                    // Optionally create mask at source
-                                    const newMask = {
-                                        id: generateId(),
-                                        type: 'mask',
-                                        name: `Auto-mask ${masks.length + 1}`,
-                                        x: x,
-                                        y: y,
-                                        width: width,
-                                        height: height,
-                                        fill: '#ffffff',
-                                        visible: true,
-                                        locked: false
-                                    };
-                                    setMasks(prev => [...prev, newMask]);
-                                    
-                                    history.push({
-                                        snippets: [...snippets, newSnippet],
-                                        masks: [...masks, newMask],
-                                        elements,
-                                        infoPoints
+                                    // Capture the image region from PDF
+                                    captureRegion(currentPageData.imageData, x, y, width, height).then(imageData => {
+                                        // Create snippet from PDF region with captured image
+                                        const newSnippet = {
+                                            id: generateId(),
+                                            type: 'snippet',
+                                            name: `Snippet ${snippets.length + 1}`,
+                                            x: x,
+                                            y: y,
+                                            width: width,
+                                            height: height,
+                                            sourceX: x,
+                                            sourceY: y,
+                                            sourceWidth: width,
+                                            sourceHeight: height,
+                                            imageData: imageData,
+                                            visible: true,
+                                            locked: false
+                                        };
+                                        setSnippets(prev => [...prev, newSnippet]);
+
+                                        // Create mask at source location to cover original
+                                        const newMask = {
+                                            id: generateId(),
+                                            type: 'mask',
+                                            name: `Auto-mask ${masks.length + 1}`,
+                                            x: x,
+                                            y: y,
+                                            width: width,
+                                            height: height,
+                                            fill: '#ffffff',
+                                            visible: true,
+                                            locked: false
+                                        };
+                                        setMasks(prev => [...prev, newMask]);
+
+                                        history.push({
+                                            snippets: [...snippets, newSnippet],
+                                            masks: [...masks, newMask],
+                                            elements,
+                                            infoPoints
+                                        });
                                     });
                                 }
                                 break;
@@ -2085,10 +2125,19 @@
                     ctx.fillRect(mask.x, mask.y, mask.width, mask.height);
                 });
                 
-                // Draw snippets
-                // For now, snippets are visual copies from the PDF
-                // In a full implementation, we'd store the actual image data
-                
+                // Draw snippets with their captured image data
+                for (const snippet of snippets.filter(s => s.visible !== false)) {
+                    if (snippet.imageData) {
+                        const snippetImg = new Image();
+                        await new Promise(resolve => {
+                            snippetImg.onload = resolve;
+                            snippetImg.onerror = resolve;
+                            snippetImg.src = snippet.imageData;
+                        });
+                        ctx.drawImage(snippetImg, snippet.x, snippet.y, snippet.width, snippet.height);
+                    }
+                }
+
                 // Draw elements
                 elements.filter(e => e.visible !== false).forEach(element => {
                     ctx.strokeStyle = element.stroke || '#000000';
@@ -2941,9 +2990,36 @@
                                                     cursor: currentTool === OPERATIONS.SELECT ? 'move' : 'default',
                                                     pointerEvents: currentTool === OPERATIONS.SELECT ? 'auto' : 'none',
                                                     border: `2px dashed ${selectedId === snippet.id ? '#0ea5e9' : '#666'}`,
-                                                    background: 'rgba(14, 165, 233, 0.1)'
+                                                    overflow: 'hidden'
                                                 }}
                                             >
+                                                {/* Render captured image content */}
+                                                {snippet.imageData ? (
+                                                    <img
+                                                        src={snippet.imageData}
+                                                        alt={snippet.name}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'fill',
+                                                            pointerEvents: 'none'
+                                                        }}
+                                                        draggable={false}
+                                                    />
+                                                ) : (
+                                                    <div style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        background: 'rgba(14, 165, 233, 0.1)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '10px',
+                                                        color: '#666'
+                                                    }}>
+                                                        No image
+                                                    </div>
+                                                )}
                                                 <div className="absolute -top-6 left-0 text-xs bg-accent text-white px-2 py-0.5 rounded whitespace-nowrap">
                                                     {snippet.name}
                                                 </div>
