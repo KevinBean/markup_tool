@@ -1355,6 +1355,8 @@
 
             const isInfoPoint = selection.type === 'info_point';
             const isLine = selection.type === 'line';
+            const isArrow = selection.type === 'arrow';
+            const isLineOrArrow = isLine || isArrow;
             const isSymbol = selection.type === 'symbol';
             const isMeasurement = selection.type === 'measurement';
 
@@ -1376,8 +1378,8 @@
                         />
                     </div>
 
-                    {/* Line-specific position (start and end points) */}
-                    {isLine && (
+                    {/* Line/Arrow-specific position (start and end points) */}
+                    {isLineOrArrow && (
                         <>
                             <div className="space-y-2">
                                 <div className="text-xs text-gray-500">Start Point</div>
@@ -1428,8 +1430,8 @@
                         </>
                     )}
 
-                    {/* Position - for non-line elements */}
-                    {!isLine && (
+                    {/* Position - for non-line/arrow elements */}
+                    {!isLineOrArrow && (
                         <div className="space-y-2">
                             <div className="text-xs text-gray-500">Position</div>
                             <div className="grid grid-cols-2 gap-2">
@@ -1452,6 +1454,31 @@
                                     />
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Arrow-specific options */}
+                    {isArrow && (
+                        <div className="space-y-2 pt-2 border-t border-panel-border">
+                            <div className="text-xs text-gray-500">Arrow Style</div>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selection.arrowStart || false}
+                                    onChange={(e) => onUpdate({ arrowStart: e.target.checked })}
+                                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-accent focus:ring-accent"
+                                />
+                                <span className="text-xs text-gray-300">Arrow at start</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selection.arrowEnd !== false}
+                                    onChange={(e) => onUpdate({ arrowEnd: e.target.checked })}
+                                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-accent focus:ring-accent"
+                                />
+                                <span className="text-xs text-gray-300">Arrow at end</span>
+                            </label>
                         </div>
                     )}
 
@@ -1839,6 +1866,30 @@
                                 </div>
                             </div>
                         </>
+                    )}
+
+                    {/* Rotation - for rectangles, circles, snippets, masks */}
+                    {(selection.type === 'rectangle' || selection.type === 'circle' || selection.type === 'snippet' || selection.type === 'mask') && (
+                        <div className="space-y-2 pt-2 border-t border-panel-border">
+                            <div className="text-xs text-gray-500">Rotation</div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    value={selection.rotation || 0}
+                                    onChange={(e) => onUpdate({ rotation: parseFloat(e.target.value) % 360 })}
+                                    className="w-20"
+                                    step="15"
+                                />
+                                <span className="text-xs text-gray-400">degrees</span>
+                                <button
+                                    className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded"
+                                    onClick={() => onUpdate({ rotation: ((selection.rotation || 0) + 90) % 360 })}
+                                    title="Rotate 90° clockwise"
+                                >
+                                    +90°
+                                </button>
+                            </div>
+                        </div>
                     )}
 
                     {/* Style - for non-info-point, non-symbol, non-measurement elements */}
@@ -2956,6 +3007,9 @@
             const [measurements, setMeasurements] = useState([]);
             const [cableAnnotations, setCableAnnotations] = useState([]);
 
+            // Clipboard State for Copy/Paste
+            const [clipboard, setClipboard] = useState(null);
+
             // Scale Calibration State
             const [scaleCalibration, setScaleCalibration] = useState({
                 isCalibrated: false,
@@ -3237,6 +3291,7 @@
                                     case 'circle':
                                         return pointInCircle(coords, el.x, el.y, el.radius);
                                     case 'line':
+                                    case 'arrow':
                                         return pointToLineDistance(coords, el.x1, el.y1, el.x2, el.y2) <= 8;
                                     default:
                                         return false;
@@ -3264,8 +3319,8 @@
                                 setSelectedId(clickedElement.id);
                                 setSelectedType('element');
                                 setIsDragging(true);
-                                // For lines, store drag start relative to line midpoint
-                                if (clickedElement.type === 'line') {
+                                // For lines and arrows, store drag start relative to line midpoint
+                                if (clickedElement.type === 'line' || clickedElement.type === 'arrow') {
                                     const midX = (clickedElement.x1 + clickedElement.x2) / 2;
                                     const midY = (clickedElement.y1 + clickedElement.y2) / 2;
                                     setDragStart({ x: coords.x - midX, y: coords.y - midY });
@@ -3368,6 +3423,7 @@
                         case OPERATIONS.RECTANGLE:
                         case OPERATIONS.LINE:
                         case OPERATIONS.CIRCLE:
+                        case OPERATIONS.ARROW:
                             setIsDrawing(true);
                             setDrawStart(coords);
                             setDrawEnd(coords);
@@ -3421,8 +3477,8 @@
                     if (selectedType === 'element') {
                         setElements(elements.map(el => {
                             if (el.id !== selectedId) return el;
-                            // Special handling for lines - move both endpoints
-                            if (el.type === 'line') {
+                            // Special handling for lines and arrows - move both endpoints
+                            if (el.type === 'line' || el.type === 'arrow') {
                                 const midX = (el.x1 + el.x2) / 2;
                                 const midY = (el.y1 + el.y2) / 2;
                                 const newMidX = coords.x - dragStart.x;
@@ -3554,13 +3610,14 @@
                                     stroke: styles.stroke,
                                     strokeWidth: styles.strokeWidth,
                                     fill: styles.fill,
+                                    rotation: 0,
                                     visible: true,
                                     locked: false
                                 };
                                 setElements(prev => [...prev, newRect]);
                                 history.push({ snippets, masks, elements: [...elements, newRect], infoPoints, symbols, measurements, cableAnnotations });
                                 break;
-                                
+
                             case OPERATIONS.CIRCLE:
                                 const radius = Math.max(width, height) / 2;
                                 const newCircle = {
@@ -3573,6 +3630,7 @@
                                     stroke: styles.stroke,
                                     strokeWidth: styles.strokeWidth,
                                     fill: styles.fill,
+                                    rotation: 0,
                                     visible: true,
                                     locked: false
                                 };
@@ -3596,6 +3654,26 @@
                                 };
                                 setElements(prev => [...prev, newLine]);
                                 history.push({ snippets, masks, elements: [...elements, newLine], infoPoints, symbols, measurements, cableAnnotations });
+                                break;
+
+                            case OPERATIONS.ARROW:
+                                const newArrow = {
+                                    id: generateId(),
+                                    type: 'arrow',
+                                    name: `Arrow ${elements.length + 1}`,
+                                    x1: drawStart.x,
+                                    y1: drawStart.y,
+                                    x2: coords.x,
+                                    y2: coords.y,
+                                    stroke: styles.stroke,
+                                    strokeWidth: styles.strokeWidth,
+                                    arrowStart: false,  // arrow at start point
+                                    arrowEnd: true,     // arrow at end point
+                                    visible: true,
+                                    locked: false
+                                };
+                                setElements(prev => [...prev, newArrow]);
+                                history.push({ snippets, masks, elements: [...elements, newArrow], infoPoints, symbols, measurements, cableAnnotations });
                                 break;
 
                             case OPERATIONS.MEASURE:
@@ -3647,8 +3725,38 @@
                                 if (!e.ctrlKey) setCurrentTool(OPERATIONS.SNIPPET);
                                 break;
                             case 'm': setCurrentTool(OPERATIONS.MASK); break;
-                            case 'r': setCurrentTool(OPERATIONS.RECTANGLE); break;
+                            case 'r':
+                                // If element is selected, rotate by 90°, otherwise switch to rectangle tool
+                                if (selectedId && selectedType) {
+                                    const rotateElement = (item) => ({
+                                        ...item,
+                                        rotation: ((item.rotation || 0) + 90) % 360
+                                    });
+                                    if (selectedType === 'element') {
+                                        setElements(prev => prev.map(el =>
+                                            el.id === selectedId ? rotateElement(el) : el
+                                        ));
+                                    } else if (selectedType === 'symbol') {
+                                        setSymbols(prev => prev.map(s =>
+                                            s.id === selectedId ? rotateElement(s) : s
+                                        ));
+                                    } else if (selectedType === 'snippet') {
+                                        setSnippets(prev => prev.map(s =>
+                                            s.id === selectedId ? rotateElement(s) : s
+                                        ));
+                                    } else if (selectedType === 'mask') {
+                                        setMasks(prev => prev.map(m =>
+                                            m.id === selectedId ? rotateElement(m) : m
+                                        ));
+                                    }
+                                } else {
+                                    setCurrentTool(OPERATIONS.RECTANGLE);
+                                }
+                                break;
                             case 'l': setCurrentTool(OPERATIONS.LINE); break;
+                            case 'a':
+                                if (!e.ctrlKey) setCurrentTool(OPERATIONS.ARROW);
+                                break;
                             case 'c':
                                 if (!e.ctrlKey) setCurrentTool(OPERATIONS.CIRCLE);
                                 break;
@@ -3690,7 +3798,45 @@
                                 break;
                         }
                     }
-                    
+
+                    // Arrow keys for fine-tuning position
+                    if (selectedId && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                        e.preventDefault();
+                        const step = e.shiftKey ? 10 : 1; // Shift = 10px, normal = 1px
+                        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+                        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+
+                        if (selectedType === 'snippet') {
+                            setSnippets(prev => prev.map(s =>
+                                s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
+                            ));
+                        } else if (selectedType === 'mask') {
+                            setMasks(prev => prev.map(m =>
+                                m.id === selectedId ? { ...m, x: m.x + dx, y: m.y + dy } : m
+                            ));
+                        } else if (selectedType === 'element') {
+                            setElements(prev => prev.map(el => {
+                                if (el.id !== selectedId) return el;
+                                if (el.type === 'line' || el.type === 'arrow') {
+                                    return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
+                                }
+                                return { ...el, x: el.x + dx, y: el.y + dy };
+                            }));
+                        } else if (selectedType === 'infoPoint') {
+                            setInfoPoints(prev => prev.map(p =>
+                                p.id === selectedId ? { ...p, x: p.x + dx, y: p.y + dy } : p
+                            ));
+                        } else if (selectedType === 'symbol') {
+                            setSymbols(prev => prev.map(s =>
+                                s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
+                            ));
+                        } else if (selectedType === 'measurement') {
+                            setMeasurements(prev => prev.map(m =>
+                                m.id === selectedId ? { ...m, x1: m.x1 + dx, y1: m.y1 + dy, x2: m.x2 + dx, y2: m.y2 + dy } : m
+                            ));
+                        }
+                    }
+
                     // Ctrl shortcuts
                     if (e.ctrlKey || e.metaKey) {
                         switch (e.key.toLowerCase()) {
@@ -3748,13 +3894,130 @@
                                 e.preventDefault();
                                 handleExportPDF();
                                 break;
+                            case 'c':
+                                // Copy selected element
+                                if (selectedId && selectedType) {
+                                    e.preventDefault();
+                                    let elementToCopy = null;
+                                    if (selectedType === 'snippet') {
+                                        elementToCopy = snippets.find(s => s.id === selectedId);
+                                    } else if (selectedType === 'mask') {
+                                        elementToCopy = masks.find(m => m.id === selectedId);
+                                    } else if (selectedType === 'element') {
+                                        elementToCopy = elements.find(el => el.id === selectedId);
+                                    } else if (selectedType === 'infoPoint') {
+                                        elementToCopy = infoPoints.find(p => p.id === selectedId);
+                                    } else if (selectedType === 'symbol') {
+                                        elementToCopy = symbols.find(s => s.id === selectedId);
+                                    } else if (selectedType === 'measurement') {
+                                        elementToCopy = measurements.find(m => m.id === selectedId);
+                                    }
+                                    if (elementToCopy) {
+                                        setClipboard({ type: selectedType, data: JSON.parse(JSON.stringify(elementToCopy)) });
+                                    }
+                                }
+                                break;
+                            case 'v':
+                                // Paste from clipboard
+                                if (clipboard) {
+                                    e.preventDefault();
+                                    const pastedElement = {
+                                        ...clipboard.data,
+                                        id: generateId(),
+                                        name: `${clipboard.data.name} (copy)`
+                                    };
+                                    // Offset position by 20px to avoid overlap
+                                    if (pastedElement.x !== undefined) pastedElement.x += 20;
+                                    if (pastedElement.y !== undefined) pastedElement.y += 20;
+                                    if (pastedElement.x1 !== undefined) { pastedElement.x1 += 20; pastedElement.y1 += 20; }
+                                    if (pastedElement.x2 !== undefined) { pastedElement.x2 += 20; pastedElement.y2 += 20; }
+
+                                    if (clipboard.type === 'snippet') {
+                                        setSnippets(prev => [...prev, pastedElement]);
+                                        setSelectedId(pastedElement.id);
+                                        setSelectedType('snippet');
+                                    } else if (clipboard.type === 'mask') {
+                                        setMasks(prev => [...prev, pastedElement]);
+                                        setSelectedId(pastedElement.id);
+                                        setSelectedType('mask');
+                                    } else if (clipboard.type === 'element') {
+                                        setElements(prev => [...prev, pastedElement]);
+                                        setSelectedId(pastedElement.id);
+                                        setSelectedType('element');
+                                    } else if (clipboard.type === 'infoPoint') {
+                                        // Update number for info points
+                                        const maxNumber = infoPoints.reduce((max, p) => Math.max(max, p.number || 0), 0);
+                                        pastedElement.number = maxNumber + 1;
+                                        setInfoPoints(prev => [...prev, pastedElement]);
+                                        setSelectedId(pastedElement.id);
+                                        setSelectedType('infoPoint');
+                                    } else if (clipboard.type === 'symbol') {
+                                        setSymbols(prev => [...prev, pastedElement]);
+                                        setSelectedId(pastedElement.id);
+                                        setSelectedType('symbol');
+                                    } else if (clipboard.type === 'measurement') {
+                                        setMeasurements(prev => [...prev, pastedElement]);
+                                        setSelectedId(pastedElement.id);
+                                        setSelectedType('measurement');
+                                    }
+                                }
+                                break;
+                            case 'd':
+                                // Duplicate in place (offset 10px)
+                                if (selectedId && selectedType) {
+                                    e.preventDefault();
+                                    let elementToDupe = null;
+                                    if (selectedType === 'snippet') {
+                                        elementToDupe = snippets.find(s => s.id === selectedId);
+                                    } else if (selectedType === 'mask') {
+                                        elementToDupe = masks.find(m => m.id === selectedId);
+                                    } else if (selectedType === 'element') {
+                                        elementToDupe = elements.find(el => el.id === selectedId);
+                                    } else if (selectedType === 'infoPoint') {
+                                        elementToDupe = infoPoints.find(p => p.id === selectedId);
+                                    } else if (selectedType === 'symbol') {
+                                        elementToDupe = symbols.find(s => s.id === selectedId);
+                                    } else if (selectedType === 'measurement') {
+                                        elementToDupe = measurements.find(m => m.id === selectedId);
+                                    }
+                                    if (elementToDupe) {
+                                        const duped = {
+                                            ...JSON.parse(JSON.stringify(elementToDupe)),
+                                            id: generateId(),
+                                            name: `${elementToDupe.name} (copy)`
+                                        };
+                                        // Offset by 10px
+                                        if (duped.x !== undefined) duped.x += 10;
+                                        if (duped.y !== undefined) duped.y += 10;
+                                        if (duped.x1 !== undefined) { duped.x1 += 10; duped.y1 += 10; }
+                                        if (duped.x2 !== undefined) { duped.x2 += 10; duped.y2 += 10; }
+
+                                        if (selectedType === 'snippet') {
+                                            setSnippets(prev => [...prev, duped]);
+                                        } else if (selectedType === 'mask') {
+                                            setMasks(prev => [...prev, duped]);
+                                        } else if (selectedType === 'element') {
+                                            setElements(prev => [...prev, duped]);
+                                        } else if (selectedType === 'infoPoint') {
+                                            const maxNumber = infoPoints.reduce((max, p) => Math.max(max, p.number || 0), 0);
+                                            duped.number = maxNumber + 1;
+                                            setInfoPoints(prev => [...prev, duped]);
+                                        } else if (selectedType === 'symbol') {
+                                            setSymbols(prev => [...prev, duped]);
+                                        } else if (selectedType === 'measurement') {
+                                            setMeasurements(prev => [...prev, duped]);
+                                        }
+                                        setSelectedId(duped.id);
+                                    }
+                                }
+                                break;
                         }
                     }
                 };
-                
+
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [selectedId, selectedType, history, fitToView]);
+            }, [selectedId, selectedType, history, fitToView, clipboard, snippets, masks, elements, infoPoints, symbols, measurements]);
             
             // ============================================
             // EXPORT & SAVE
@@ -3798,12 +4061,21 @@
 
                 // Draw elements
                 elements.filter(e => e.visible !== false).forEach(element => {
+                    ctx.save();
                     ctx.strokeStyle = element.stroke || '#000000';
                     ctx.lineWidth = element.strokeWidth || 2;
                     ctx.fillStyle = element.fill || 'transparent';
-                    
+                    const rotation = element.rotation || 0;
+
                     switch (element.type) {
                         case 'rectangle':
+                            if (rotation) {
+                                const cx = element.x + element.width / 2;
+                                const cy = element.y + element.height / 2;
+                                ctx.translate(cx, cy);
+                                ctx.rotate(rotation * Math.PI / 180);
+                                ctx.translate(-cx, -cy);
+                            }
                             if (element.fill && element.fill !== 'none') {
                                 ctx.fillRect(element.x, element.y, element.width, element.height);
                             }
@@ -3823,7 +4095,39 @@
                             ctx.lineTo(element.x2, element.y2);
                             ctx.stroke();
                             break;
+                        case 'arrow':
+                            // Draw arrow line
+                            ctx.beginPath();
+                            ctx.moveTo(element.x1, element.y1);
+                            ctx.lineTo(element.x2, element.y2);
+                            ctx.stroke();
+                            // Draw arrowhead at end
+                            if (element.arrowEnd !== false) {
+                                const angle = Math.atan2(element.y2 - element.y1, element.x2 - element.x1);
+                                const headLen = 10 * (element.strokeWidth || 2);
+                                ctx.beginPath();
+                                ctx.moveTo(element.x2, element.y2);
+                                ctx.lineTo(element.x2 - headLen * Math.cos(angle - Math.PI / 6), element.y2 - headLen * Math.sin(angle - Math.PI / 6));
+                                ctx.lineTo(element.x2 - headLen * Math.cos(angle + Math.PI / 6), element.y2 - headLen * Math.sin(angle + Math.PI / 6));
+                                ctx.closePath();
+                                ctx.fillStyle = element.stroke || '#000000';
+                                ctx.fill();
+                            }
+                            // Draw arrowhead at start
+                            if (element.arrowStart) {
+                                const angle = Math.atan2(element.y1 - element.y2, element.x1 - element.x2);
+                                const headLen = 10 * (element.strokeWidth || 2);
+                                ctx.beginPath();
+                                ctx.moveTo(element.x1, element.y1);
+                                ctx.lineTo(element.x1 - headLen * Math.cos(angle - Math.PI / 6), element.y1 - headLen * Math.sin(angle - Math.PI / 6));
+                                ctx.lineTo(element.x1 - headLen * Math.cos(angle + Math.PI / 6), element.y1 - headLen * Math.sin(angle + Math.PI / 6));
+                                ctx.closePath();
+                                ctx.fillStyle = element.stroke || '#000000';
+                                ctx.fill();
+                            }
+                            break;
                     }
+                    ctx.restore();
                 });
                 
                 exportCanvasRef.current = canvas;
@@ -4399,6 +4703,13 @@
                                                 onClick={() => setCurrentTool(OPERATIONS.CIRCLE)}
                                             />
                                             <ToolButton
+                                                icon={Icons.Arrow}
+                                                label="Arrow"
+                                                shortcut="A"
+                                                active={currentTool === OPERATIONS.ARROW}
+                                                onClick={() => setCurrentTool(OPERATIONS.ARROW)}
+                                            />
+                                            <ToolButton
                                                 icon={Icons.Scissors}
                                                 label="Snippet"
                                                 shortcut="S"
@@ -4606,10 +4917,7 @@
                         {/* Left Resize Handle */}
                         <div
                             className={`w-1.5 cursor-col-resize flex-shrink-0 transition-colors ${isResizingLeft ? 'bg-accent' : 'bg-panel-border hover:bg-accent/70'}`}
-                            onMouseDown={(e) => {
-                                e.preventDefault();
-                                setIsResizingLeft(true);
-                            }}
+                            onMouseDown={() => setIsResizingLeft(true)}
                             title="Drag to resize"
                         />
 
@@ -4688,6 +4996,30 @@
                                         >
                                             {/* Pattern Definitions for Fill Patterns */}
                                             <defs>
+                                                {/* Arrow Markers for Arrow Tool */}
+                                                <marker
+                                                    id="arrowhead-end"
+                                                    markerWidth="10"
+                                                    markerHeight="7"
+                                                    refX="9"
+                                                    refY="3.5"
+                                                    orient="auto"
+                                                    markerUnits="strokeWidth"
+                                                >
+                                                    <polygon points="0 0, 10 3.5, 0 7" fill="currentColor" />
+                                                </marker>
+                                                <marker
+                                                    id="arrowhead-start"
+                                                    markerWidth="10"
+                                                    markerHeight="7"
+                                                    refX="1"
+                                                    refY="3.5"
+                                                    orient="auto"
+                                                    markerUnits="strokeWidth"
+                                                >
+                                                    <polygon points="10 0, 0 3.5, 10 7" fill="currentColor" />
+                                                </marker>
+
                                                 {/* Hatch Pattern - diagonal lines (sand/granular) */}
                                                 <pattern id="pattern-hatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
                                                     <line x1="0" y1="0" x2="0" y2="8" stroke="#000" strokeWidth="1.5" opacity="0.4"/>
@@ -4768,31 +5100,40 @@
                                             )}
                                             
                                             {/* Masks */}
-                                            {masks.filter(m => m.visible !== false).map(mask => (
-                                                <rect
-                                                    key={mask.id}
-                                                    x={mask.x}
-                                                    y={mask.y}
-                                                    width={mask.width}
-                                                    height={mask.height}
-                                                    fill={mask.fill || '#ffffff'}
-                                                    stroke={selectedId === mask.id ? '#0ea5e9' : 'none'}
-                                                    strokeWidth={selectedId === mask.id ? 2 / zoom : 0}
-                                                    strokeDasharray={selectedId === mask.id ? `${4 / zoom}` : 'none'}
-                                                    style={{ zIndex: LAYERS.MASKS }}
-                                                />
-                                            ))}
+                                            {masks.filter(m => m.visible !== false).map(mask => {
+                                                const maskRotation = mask.rotation || 0;
+                                                const maskCenterX = mask.x + mask.width / 2;
+                                                const maskCenterY = mask.y + mask.height / 2;
+                                                return (
+                                                    <rect
+                                                        key={mask.id}
+                                                        x={mask.x}
+                                                        y={mask.y}
+                                                        width={mask.width}
+                                                        height={mask.height}
+                                                        fill={mask.fill || '#ffffff'}
+                                                        stroke={selectedId === mask.id ? '#0ea5e9' : 'none'}
+                                                        strokeWidth={selectedId === mask.id ? 2 / zoom : 0}
+                                                        strokeDasharray={selectedId === mask.id ? `${4 / zoom}` : 'none'}
+                                                        style={{ zIndex: LAYERS.MASKS }}
+                                                        transform={maskRotation ? `rotate(${maskRotation} ${maskCenterX} ${maskCenterY})` : undefined}
+                                                    />
+                                                );
+                                            })}
                                             
                                             {/* Elements */}
                                             {elements.filter(e => e.visible !== false).map(element => {
                                                 const isSelected = selectedId === element.id;
                                                 const hasPattern = element.fillPattern && element.fillPattern !== 'solid';
                                                 const fillOpacity = element.fillOpacity || 1;
+                                                const rotation = element.rotation || 0;
 
                                                 switch (element.type) {
                                                     case 'rectangle':
+                                                        const rectCenterX = element.x + element.width / 2;
+                                                        const rectCenterY = element.y + element.height / 2;
                                                         return (
-                                                            <g key={element.id}>
+                                                            <g key={element.id} transform={rotation ? `rotate(${rotation} ${rectCenterX} ${rectCenterY})` : undefined}>
                                                                 {/* Base fill */}
                                                                 <rect
                                                                     x={element.x}
@@ -4816,22 +5157,42 @@
                                                                     />
                                                                 )}
                                                                 {isSelected && (
-                                                                    <rect
-                                                                        x={element.x - 2}
-                                                                        y={element.y - 2}
-                                                                        width={element.width + 4}
-                                                                        height={element.height + 4}
-                                                                        fill="none"
-                                                                        stroke="#0ea5e9"
-                                                                        strokeWidth={2 / zoom}
-                                                                        strokeDasharray={`${4 / zoom}`}
-                                                                    />
+                                                                    <>
+                                                                        <rect
+                                                                            x={element.x - 2}
+                                                                            y={element.y - 2}
+                                                                            width={element.width + 4}
+                                                                            height={element.height + 4}
+                                                                            fill="none"
+                                                                            stroke="#0ea5e9"
+                                                                            strokeWidth={2 / zoom}
+                                                                            strokeDasharray={`${4 / zoom}`}
+                                                                        />
+                                                                        {/* Rotation handle */}
+                                                                        <line
+                                                                            x1={rectCenterX}
+                                                                            y1={element.y - 2}
+                                                                            x2={rectCenterX}
+                                                                            y2={element.y - 20}
+                                                                            stroke="#0ea5e9"
+                                                                            strokeWidth={2 / zoom}
+                                                                        />
+                                                                        <circle
+                                                                            cx={rectCenterX}
+                                                                            cy={element.y - 20}
+                                                                            r={6 / zoom}
+                                                                            fill="#0ea5e9"
+                                                                            stroke="#fff"
+                                                                            strokeWidth={1 / zoom}
+                                                                            style={{ cursor: 'grab' }}
+                                                                        />
+                                                                    </>
                                                                 )}
                                                             </g>
                                                         );
                                                     case 'circle':
                                                         return (
-                                                            <g key={element.id}>
+                                                            <g key={element.id} transform={rotation ? `rotate(${rotation} ${element.x} ${element.y})` : undefined}>
                                                                 {/* Base fill */}
                                                                 <circle
                                                                     cx={element.x}
@@ -4875,6 +5236,27 @@
                                                                     y2={element.y2}
                                                                     stroke={element.stroke}
                                                                     strokeWidth={element.strokeWidth}
+                                                                />
+                                                                {isSelected && (
+                                                                    <>
+                                                                        <circle cx={element.x1} cy={element.y1} r={4 / zoom} fill="#0ea5e9" />
+                                                                        <circle cx={element.x2} cy={element.y2} r={4 / zoom} fill="#0ea5e9" />
+                                                                    </>
+                                                                )}
+                                                            </g>
+                                                        );
+                                                    case 'arrow':
+                                                        return (
+                                                            <g key={element.id} style={{ color: element.stroke }}>
+                                                                <line
+                                                                    x1={element.x1}
+                                                                    y1={element.y1}
+                                                                    x2={element.x2}
+                                                                    y2={element.y2}
+                                                                    stroke={element.stroke}
+                                                                    strokeWidth={element.strokeWidth}
+                                                                    markerEnd={element.arrowEnd !== false ? "url(#arrowhead-end)" : undefined}
+                                                                    markerStart={element.arrowStart ? "url(#arrowhead-start)" : undefined}
                                                                 />
                                                                 {isSelected && (
                                                                     <>
@@ -5202,6 +5584,19 @@
                                                             strokeWidth={styles.strokeWidth}
                                                         />
                                                     )}
+                                                    {currentTool === OPERATIONS.ARROW && (
+                                                        <g style={{ color: styles.stroke }}>
+                                                            <line
+                                                                x1={drawStart.x}
+                                                                y1={drawStart.y}
+                                                                x2={drawEnd.x}
+                                                                y2={drawEnd.y}
+                                                                stroke={styles.stroke}
+                                                                strokeWidth={styles.strokeWidth}
+                                                                markerEnd="url(#arrowhead-end)"
+                                                            />
+                                                        </g>
+                                                    )}
                                                 </g>
                                             )}
                                         </svg>
@@ -5210,6 +5605,7 @@
                                         {snippets.filter(s => s.visible !== false).map(snippet => {
                                             const isSelected = selectedId === snippet.id;
                                             const showBorder = isSelected || !snippet.hideBorder;
+                                            const snippetRotation = snippet.rotation || 0;
                                             return (
                                             <div
                                                 key={snippet.id}
@@ -5223,7 +5619,9 @@
                                                     cursor: currentTool === OPERATIONS.SELECT ? 'move' : 'default',
                                                     pointerEvents: currentTool === OPERATIONS.SELECT ? 'auto' : 'none',
                                                     border: showBorder ? `2px dashed ${isSelected ? '#0ea5e9' : '#666'}` : 'none',
-                                                    overflow: 'hidden'
+                                                    overflow: 'hidden',
+                                                    transform: snippetRotation ? `rotate(${snippetRotation}deg)` : undefined,
+                                                    transformOrigin: 'center center'
                                                 }}
                                             >
                                                 {/* Render captured image content */}
@@ -5294,10 +5692,7 @@
                         {/* Right Resize Handle */}
                         <div
                             className={`w-1.5 cursor-col-resize flex-shrink-0 transition-colors ${isResizingRight ? 'bg-accent' : 'bg-panel-border hover:bg-accent/70'}`}
-                            onMouseDown={(e) => {
-                                e.preventDefault();
-                                setIsResizingRight(true);
-                            }}
+                            onMouseDown={() => setIsResizingRight(true)}
                             title="Drag to resize"
                         />
 
