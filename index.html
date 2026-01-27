@@ -381,7 +381,9 @@
             CALIBRATE: 'calibrate',
             MEASURE: 'measure',
             SYMBOL: 'symbol',
-            COMMENT: 'comment'
+            COMMENT: 'comment',
+            POLYLINE: 'polyline',
+            FREEHAND: 'freehand'
         };
         
         const LAYERS = {
@@ -1260,6 +1262,38 @@
             Comment: () => (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            ),
+            Polyline: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="4 17 8 11 13 15 20 7"/>
+                    <circle cx="4" cy="17" r="2" fill="currentColor"/>
+                    <circle cx="8" cy="11" r="2" fill="currentColor"/>
+                    <circle cx="13" cy="15" r="2" fill="currentColor"/>
+                    <circle cx="20" cy="7" r="2" fill="currentColor"/>
+                </svg>
+            ),
+            Pencil: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                </svg>
+            ),
+            Image: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                </svg>
+            ),
+            Star: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+            ),
+            Clock: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
                 </svg>
             ),
         };
@@ -3065,7 +3099,7 @@
         // SYMBOL LIBRARY PANEL COMPONENT
         // ============================================
 
-        const SymbolLibraryPanel = ({ selectedSymbolId, onSelectSymbol, symbolCategory, onSetCategory }) => {
+        const SymbolLibraryPanel = ({ selectedSymbolId, onSelectSymbol, symbolCategory, onSetCategory, favorites, onToggleFavorite }) => {
             const categories = [
                 { id: 'all', label: 'All' },
                 ...Object.entries(HV_SYMBOL_CATEGORIES).map(([id, cat]) => ({ id, label: cat.label }))
@@ -3102,18 +3136,42 @@
                             {filteredSymbols.map(symbol => {
                                 const catColor = HV_SYMBOL_CATEGORIES[symbol.category]?.color || '#666';
                                 const catLabel = HV_SYMBOL_CATEGORIES[symbol.category]?.label || symbol.category;
+                                const isFavorite = favorites?.some(f => f.symbolId === symbol.id);
                                 return (
                                     <div
                                         key={symbol.id}
                                         onClick={() => onSelectSymbol(symbol.id)}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            if (onToggleFavorite) onToggleFavorite(symbol.id);
+                                        }}
                                         className={`
-                                            p-2 rounded-lg cursor-pointer border-2 transition-all
+                                            p-2 rounded-lg cursor-pointer border-2 transition-all relative group
                                             ${selectedSymbolId === symbol.id
                                                 ? 'border-accent bg-accent/20'
                                                 : 'border-transparent bg-gray-800/50 hover:bg-gray-700'}
                                         `}
-                                        title={symbol.name}
+                                        title={`${symbol.name}\nRight-click to ${isFavorite ? 'remove from' : 'add to'} favorites`}
                                     >
+                                        {/* Favorite indicator */}
+                                        {isFavorite && (
+                                            <div className="absolute top-1 right-1 w-4 h-4 text-yellow-400">
+                                                <Icons.Star />
+                                            </div>
+                                        )}
+                                        {/* Add to favorites button on hover */}
+                                        {!isFavorite && (
+                                            <button
+                                                className="absolute top-1 right-1 w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 hover:text-yellow-400 transition-all"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (onToggleFavorite) onToggleFavorite(symbol.id);
+                                                }}
+                                                title="Add to favorites"
+                                            >
+                                                <Icons.Star />
+                                            </button>
+                                        )}
                                         <div className="flex items-center justify-center h-14 bg-white/5 rounded mb-2">
                                             <svg
                                                 width={Math.min(symbol.width, 55)}
@@ -3296,6 +3354,26 @@
             const [commentDialogPosition, setCommentDialogPosition] = useState({ x: 0, y: 0 });
             const [newCommentText, setNewCommentText] = useState('');
             const [replyText, setReplyText] = useState('');
+
+            // Polyline/Freehand Drawing State
+            const [polylinePoints, setPolylinePoints] = useState([]);
+            const [freehandPath, setFreehandPath] = useState([]);
+            const [isDrawingFreehand, setIsDrawingFreehand] = useState(false);
+
+            // Image Overlays State
+            const [imageOverlays, setImageOverlays] = useState([]);
+
+            // Recent Files State
+            const [recentFiles, setRecentFiles] = useState(() => {
+                const saved = localStorage.getItem('markupRecentFiles');
+                return saved ? JSON.parse(saved) : [];
+            });
+
+            // Favorites State
+            const [favorites, setFavorites] = useState(() => {
+                const saved = localStorage.getItem('markupFavorites');
+                return saved ? JSON.parse(saved) : [];
+            });
 
             // Clipboard State for Copy/Paste
             const [clipboard, setClipboard] = useState(null);
@@ -3611,6 +3689,20 @@
                     setZoom(1);
                     setPanOffset({ x: 0, y: 0 });
 
+                    // Add to recent files
+                    const newRecentFile = {
+                        name: file.name,
+                        type: isImage ? 'image' : 'pdf',
+                        timestamp: new Date().toISOString(),
+                        size: file.size
+                    };
+                    setRecentFiles(prev => {
+                        const filtered = prev.filter(f => f.name !== file.name);
+                        const updated = [newRecentFile, ...filtered].slice(0, 10);
+                        localStorage.setItem('markupRecentFiles', JSON.stringify(updated));
+                        return updated;
+                    });
+
                     // Fit to view
                     setTimeout(() => fitToView(), 100);
                 } catch (error) {
@@ -3633,7 +3725,48 @@
                 e.preventDefault();
                 e.stopPropagation();
             };
-            
+
+            // Image Overlay Import
+            const imageOverlayInputRef = useRef(null);
+
+            const handleImportImageOverlay = async (file) => {
+                if (!file || !pdfData) return;
+
+                const isImage = isImageFile(file.name);
+                if (!isImage) {
+                    alert('Please select an image file (PNG, JPG, JPEG, GIF, WEBP, BMP, SVG)');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const newOverlay = {
+                            id: generateId(),
+                            type: 'imageOverlay',
+                            name: file.name,
+                            imageData: e.target.result,
+                            x: 50,
+                            y: 50,
+                            width: img.width,
+                            height: img.height,
+                            originalWidth: img.width,
+                            originalHeight: img.height,
+                            opacity: 1,
+                            visible: true,
+                            locked: false
+                        };
+                        setImageOverlays(prev => [...prev, newOverlay]);
+                        setSelectedId(newOverlay.id);
+                        setSelectedType('imageOverlay');
+                        history.push({ snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations });
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
             // ============================================
             // VIEWPORT CONTROLS
             // ============================================
@@ -3702,6 +3835,10 @@
                             const clickedMask = masks.find(m =>
                                 m.visible !== false && pointInRect(coords, { x: m.x, y: m.y, width: m.width, height: m.height })
                             );
+                            // Check image overlays
+                            const clickedImageOverlay = imageOverlays.find(img =>
+                                img.visible !== false && pointInRect(coords, { x: img.x, y: img.y, width: img.width, height: img.height })
+                            );
                             // Check info points (click within 15px radius)
                             const clickedInfoPoint = infoPoints.find(p =>
                                 p.visible !== false && distance(coords, { x: p.x, y: p.y }) <= 15
@@ -3717,7 +3854,7 @@
                                 m.visible !== false && pointToLineDistance(coords, m.x1, m.y1, m.x2, m.y2) <= 10
                             );
 
-                            // Check elements (rectangles, circles, lines, arrows, text)
+                            // Check elements (rectangles, circles, lines, arrows, text, polylines, freehand)
                             const clickedElement = elements.find(el => {
                                 if (el.visible === false) return false;
                                 switch (el.type) {
@@ -3732,6 +3869,15 @@
                                         const textWidth = el.width || 100;
                                         const textHeight = el.height || 20;
                                         return pointInRect(coords, { x: el.x, y: el.y, width: textWidth, height: textHeight });
+                                    case 'polyline':
+                                    case 'freehand':
+                                        if (!el.points || el.points.length < 2) return false;
+                                        for (let i = 0; i < el.points.length - 1; i++) {
+                                            if (pointToLineDistance(coords, el.points[i].x, el.points[i].y, el.points[i+1].x, el.points[i+1].y) <= 8) {
+                                                return true;
+                                            }
+                                        }
+                                        return false;
                                     default:
                                         return false;
                                 }
@@ -3744,6 +3890,7 @@
                             else if (clickedSymbol) { clickedItem = clickedSymbol; clickedItemType = 'symbol'; }
                             else if (clickedMeasurement) { clickedItem = clickedMeasurement; clickedItemType = 'measurement'; }
                             else if (clickedElement) { clickedItem = clickedElement; clickedItemType = 'element'; }
+                            else if (clickedImageOverlay) { clickedItem = clickedImageOverlay; clickedItemType = 'imageOverlay'; }
                             else if (clickedSnippet) { clickedItem = clickedSnippet; clickedItemType = 'snippet'; }
                             else if (clickedMask) { clickedItem = clickedMask; clickedItemType = 'mask'; }
 
@@ -3826,6 +3973,17 @@
                             setCommentDialogPosition({ x: coords.x, y: coords.y });
                             setShowCommentDialog(true);
                             setNewCommentText('');
+                            break;
+
+                        case OPERATIONS.POLYLINE:
+                            // Add point to polyline
+                            setPolylinePoints(prev => [...prev, coords]);
+                            break;
+
+                        case OPERATIONS.FREEHAND:
+                            // Start freehand drawing
+                            setIsDrawingFreehand(true);
+                            setFreehandPath([coords]);
                             break;
 
                         case OPERATIONS.CALIBRATE:
@@ -3939,6 +4097,7 @@
                     if (selectedType === 'mask') updatePosition(masks, setMasks);
                     if (selectedType === 'infoPoint') updatePosition(infoPoints, setInfoPoints);
                     if (selectedType === 'symbol') updatePosition(symbols, setSymbols);
+                    if (selectedType === 'imageOverlay') updatePosition(imageOverlays, setImageOverlays);
                     if (selectedType === 'measurement') {
                         setMeasurements(measurements.map(m => {
                             if (m.id !== selectedId) return m;
@@ -3985,6 +4144,11 @@
 
                 if (isDrawing) {
                     setDrawEnd(coords);
+                }
+
+                // Freehand drawing - add points as mouse moves
+                if (isDrawingFreehand && currentTool === OPERATIONS.FREEHAND) {
+                    setFreehandPath(prev => [...prev, coords]);
                 }
 
                 // Update box selection
@@ -4085,6 +4249,27 @@
                         }
                     }
                     setSelectionBox(null);
+                    return;
+                }
+
+                // Complete freehand drawing
+                if (isDrawingFreehand && freehandPath.length > 1) {
+                    const newFreehand = {
+                        id: generateId(),
+                        type: 'freehand',
+                        name: `Freehand ${elements.length + 1}`,
+                        points: [...freehandPath],
+                        stroke: styles.stroke,
+                        strokeWidth: styles.strokeWidth,
+                        visible: true,
+                        locked: false
+                    };
+                    setElements(prev => [...prev, newFreehand]);
+                    setSelectedId(newFreehand.id);
+                    setSelectedType('element');
+                    history.push({ snippets, masks, elements: [...elements, newFreehand], infoPoints, symbols, measurements, cableAnnotations });
+                    setIsDrawingFreehand(false);
+                    setFreehandPath([]);
                     return;
                 }
 
@@ -4333,12 +4518,38 @@
                             case 'd': setCurrentTool(OPERATIONS.MEASURE); break;
                             case 'p': setCurrentTool(OPERATIONS.SYMBOL); break;
                             case 'k': setCurrentTool(OPERATIONS.COMMENT); break;
+                            case 'y': setCurrentTool(OPERATIONS.POLYLINE); break;
+                            case 'f': setCurrentTool(OPERATIONS.FREEHAND); break;
+                            case 'enter':
+                                // Finish polyline if drawing
+                                if (currentTool === OPERATIONS.POLYLINE && polylinePoints.length >= 2) {
+                                    const newPolyline = {
+                                        id: generateId(),
+                                        type: 'polyline',
+                                        name: `Polyline ${elements.length + 1}`,
+                                        points: [...polylinePoints],
+                                        stroke: styles.stroke,
+                                        strokeWidth: styles.strokeWidth,
+                                        visible: true,
+                                        locked: false
+                                    };
+                                    setElements(prev => [...prev, newPolyline]);
+                                    setSelectedId(newPolyline.id);
+                                    setSelectedType('element');
+                                    history.push({ snippets, masks, elements: [...elements, newPolyline], infoPoints, symbols, measurements, cableAnnotations });
+                                    setPolylinePoints([]);
+                                }
+                                break;
                             case 'escape':
                                 setSelectedId(null);
                                 setSelectedType(null);
                                 setIsDrawing(false);
                                 setCalibrationStep(0);
                                 setCalibrationPoints([]);
+                                // Cancel polyline/freehand drawing
+                                setPolylinePoints([]);
+                                setFreehandPath([]);
+                                setIsDrawingFreehand(false);
                                 break;
                             case 'delete':
                             case 'backspace':
@@ -5204,6 +5415,24 @@
             };
 
             // ============================================
+            // FAVORITES FUNCTIONS
+            // ============================================
+
+            const handleToggleFavorite = (symbolId) => {
+                const existingIndex = favorites.findIndex(f => f.symbolId === symbolId);
+                let newFavorites;
+                if (existingIndex >= 0) {
+                    // Remove from favorites
+                    newFavorites = favorites.filter((_, i) => i !== existingIndex);
+                } else {
+                    // Add to favorites
+                    newFavorites = [...favorites, { symbolId, addedAt: new Date().toISOString() }];
+                }
+                setFavorites(newFavorites);
+                localStorage.setItem('markupFavorites', JSON.stringify(newFavorites));
+            };
+
+            // ============================================
             // COMMENT FUNCTIONS
             // ============================================
 
@@ -5309,10 +5538,72 @@
                                 <div className="w-4 h-4"><Icons.Save /></div>
                                 Save
                             </button>
+                            <button
+                                className="px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 rounded flex items-center gap-2"
+                                onClick={() => imageOverlayInputRef.current?.click()}
+                                disabled={!pdfData}
+                                title="Import image as overlay"
+                            >
+                                <div className="w-4 h-4"><Icons.Image /></div>
+                                Import Image
+                            </button>
+                            <input
+                                ref={imageOverlayInputRef}
+                                type="file"
+                                accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.svg"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) handleImportImageOverlay(file);
+                                    e.target.value = '';
+                                }}
+                            />
+                            {/* Recent Files Dropdown */}
+                            {recentFiles.length > 0 && (
+                                <div className="relative group">
+                                    <button
+                                        className="px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 rounded flex items-center gap-2"
+                                    >
+                                        <div className="w-4 h-4"><Icons.Clock /></div>
+                                        Recent
+                                        <div className="w-3 h-3"><Icons.ChevronDown /></div>
+                                    </button>
+                                    <div className="absolute top-full left-0 mt-1 bg-panel-bg border border-panel-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-[200px]">
+                                        <div className="py-1 max-h-60 overflow-y-auto">
+                                            {recentFiles.map((file, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="px-3 py-2 hover:bg-gray-700 cursor-default flex items-center gap-2"
+                                                    title={`${file.name} - ${new Date(file.timestamp).toLocaleString()}`}
+                                                >
+                                                    <div className="w-4 h-4 text-gray-500">
+                                                        {file.type === 'pdf' ? <Icons.File /> : <Icons.Image />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm text-gray-300 truncate">{file.name}</div>
+                                                        <div className="text-xs text-gray-500">{new Date(file.timestamp).toLocaleDateString()}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="border-t border-panel-border px-3 py-2">
+                                            <button
+                                                className="text-xs text-gray-500 hover:text-gray-300"
+                                                onClick={() => {
+                                                    setRecentFiles([]);
+                                                    localStorage.removeItem('markupRecentFiles');
+                                                }}
+                                            >
+                                                Clear Recent
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        
+
                         <div className="h-6 w-px bg-panel-border" />
-                        
+
                         {/* Undo/Redo */}
                         <div className="flex items-center gap-1">
                             <button
@@ -5494,6 +5785,14 @@
                                     <div className="w-4 h-4"><Icons.Template /></div>
                                     <span className="text-[10px]">Templates</span>
                                 </button>
+                                <button
+                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'favorites' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
+                                    onClick={() => setLeftPanelTab('favorites')}
+                                    title="Favorites"
+                                >
+                                    <div className="w-4 h-4"><Icons.Star /></div>
+                                    <span className="text-[10px]">Favs</span>
+                                </button>
                             </div>
                             
                             {leftPanelTab === 'tools' ? (
@@ -5563,6 +5862,20 @@
                                                 shortcut="M"
                                                 active={currentTool === OPERATIONS.MASK}
                                                 onClick={() => setCurrentTool(OPERATIONS.MASK)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Polyline}
+                                                label="Polyline"
+                                                shortcut="Y"
+                                                active={currentTool === OPERATIONS.POLYLINE}
+                                                onClick={() => setCurrentTool(OPERATIONS.POLYLINE)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Pencil}
+                                                label="Freehand"
+                                                shortcut="F"
+                                                active={currentTool === OPERATIONS.FREEHAND}
+                                                onClick={() => setCurrentTool(OPERATIONS.FREEHAND)}
                                             />
                                         </div>
                                     </div>
@@ -5933,6 +6246,8 @@
                                     }}
                                     symbolCategory={symbolCategory}
                                     onSetCategory={setSymbolCategory}
+                                    favorites={favorites}
+                                    onToggleFavorite={handleToggleFavorite}
                                 />
                             ) : leftPanelTab === 'layers' ? (
                                 <div className="flex-1 overflow-y-auto">
@@ -6049,6 +6364,55 @@
                                         </div>
                                     )}
                                 </div>
+                            ) : leftPanelTab === 'favorites' ? (
+                                <div className="flex-1 overflow-y-auto p-3">
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-3">Favorite Symbols</div>
+                                    {favorites.length > 0 ? (
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {favorites.map((fav, idx) => {
+                                                const symbolDef = HV_SYMBOLS[fav.symbolId];
+                                                if (!symbolDef) return null;
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        className="relative group bg-gray-800 rounded-lg p-2 cursor-pointer hover:bg-gray-700 border border-panel-border"
+                                                        onClick={() => {
+                                                            setSelectedSymbolId(fav.symbolId);
+                                                            setCurrentTool(OPERATIONS.SYMBOL);
+                                                        }}
+                                                        title={symbolDef.name}
+                                                    >
+                                                        <div
+                                                            className="w-full aspect-square flex items-center justify-center"
+                                                            dangerouslySetInnerHTML={{ __html: symbolDef.svg }}
+                                                        />
+                                                        <div className="text-[10px] text-gray-400 text-center truncate mt-1">{symbolDef.name}</div>
+                                                        <button
+                                                            className="absolute top-1 right-1 w-4 h-4 bg-red-500/80 rounded-full text-white opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const newFavs = favorites.filter((_, i) => i !== idx);
+                                                                setFavorites(newFavs);
+                                                                localStorage.setItem('markupFavorites', JSON.stringify(newFavs));
+                                                            }}
+                                                            title="Remove from favorites"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-gray-500 py-8">
+                                            <div className="w-12 h-12 mx-auto mb-2 text-gray-600">
+                                                <Icons.Star />
+                                            </div>
+                                            <p className="text-sm">No favorites yet</p>
+                                            <p className="text-xs mt-1">Right-click symbols to add to favorites</p>
+                                        </div>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="flex-1 overflow-hidden">
                                     <DataViewPanel
@@ -6082,6 +6446,26 @@
                                 onMouseMove={handleMouseMove}
                                 onMouseUp={handleMouseUp}
                                 onMouseLeave={handleMouseUp}
+                                onDoubleClick={(e) => {
+                                    // Double-click to finish polyline
+                                    if (currentTool === OPERATIONS.POLYLINE && polylinePoints.length >= 2) {
+                                        const newPolyline = {
+                                            id: generateId(),
+                                            type: 'polyline',
+                                            name: `Polyline ${elements.length + 1}`,
+                                            points: [...polylinePoints],
+                                            stroke: styles.stroke,
+                                            strokeWidth: styles.strokeWidth,
+                                            visible: true,
+                                            locked: false
+                                        };
+                                        setElements(prev => [...prev, newPolyline]);
+                                        setSelectedId(newPolyline.id);
+                                        setSelectedType('element');
+                                        history.push({ snippets, masks, elements: [...elements, newPolyline], infoPoints, symbols, measurements, cableAnnotations });
+                                        setPolylinePoints([]);
+                                    }
+                                }}
                                 onWheel={handleWheel}
                                 onDrop={handleDrop}
                                 onDragOver={handleDragOver}
@@ -6271,7 +6655,37 @@
                                                     />
                                                 );
                                             })}
-                                            
+
+                                            {/* Image Overlays */}
+                                            {imageOverlays.filter(img => img.visible !== false).map(overlay => {
+                                                const isSelected = selectedId === overlay.id;
+                                                return (
+                                                    <g key={overlay.id} style={{ cursor: currentTool === OPERATIONS.SELECT ? 'pointer' : 'default' }}>
+                                                        <image
+                                                            href={overlay.imageData}
+                                                            x={overlay.x}
+                                                            y={overlay.y}
+                                                            width={overlay.width}
+                                                            height={overlay.height}
+                                                            opacity={overlay.opacity || 1}
+                                                            preserveAspectRatio="none"
+                                                        />
+                                                        {isSelected && (
+                                                            <rect
+                                                                x={overlay.x - 2}
+                                                                y={overlay.y - 2}
+                                                                width={overlay.width + 4}
+                                                                height={overlay.height + 4}
+                                                                fill="none"
+                                                                stroke="#0ea5e9"
+                                                                strokeWidth={2 / zoom}
+                                                                strokeDasharray={`${4 / zoom}`}
+                                                            />
+                                                        )}
+                                                    </g>
+                                                );
+                                            })}
+
                                             {/* Elements */}
                                             {elements.filter(e => e.visible !== false).map(element => {
                                                 const isSelected = selectedId === element.id || selectedIds.some(s => s.id === element.id && s.type === 'element');
@@ -6464,6 +6878,49 @@
                                                                         strokeWidth={2 / zoom}
                                                                         strokeDasharray={`${4 / zoom}`}
                                                                     />
+                                                                )}
+                                                            </g>
+                                                        );
+                                                    case 'polyline':
+                                                        if (!element.points || element.points.length < 2) return null;
+                                                        const polylinePathData = element.points.map((p, i) =>
+                                                            (i === 0 ? 'M' : 'L') + p.x + ' ' + p.y
+                                                        ).join(' ');
+                                                        return (
+                                                            <g key={element.id}>
+                                                                <path
+                                                                    d={polylinePathData}
+                                                                    fill="none"
+                                                                    stroke={element.stroke}
+                                                                    strokeWidth={element.strokeWidth}
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                />
+                                                                {isSelected && element.points.map((p, i) => (
+                                                                    <circle key={i} cx={p.x} cy={p.y} r={4 / zoom} fill="#0ea5e9" />
+                                                                ))}
+                                                            </g>
+                                                        );
+                                                    case 'freehand':
+                                                        if (!element.points || element.points.length < 2) return null;
+                                                        const freehandPathData = element.points.map((p, i) =>
+                                                            (i === 0 ? 'M' : 'L') + p.x + ' ' + p.y
+                                                        ).join(' ');
+                                                        return (
+                                                            <g key={element.id}>
+                                                                <path
+                                                                    d={freehandPathData}
+                                                                    fill="none"
+                                                                    stroke={element.stroke}
+                                                                    strokeWidth={element.strokeWidth}
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                />
+                                                                {isSelected && (
+                                                                    <>
+                                                                        <circle cx={element.points[0].x} cy={element.points[0].y} r={4 / zoom} fill="#0ea5e9" />
+                                                                        <circle cx={element.points[element.points.length - 1].x} cy={element.points[element.points.length - 1].y} r={4 / zoom} fill="#0ea5e9" />
+                                                                    </>
                                                                 )}
                                                             </g>
                                                         );
@@ -6862,6 +7319,44 @@
                                                         </g>
                                                     )}
                                                 </g>
+                                            )}
+
+                                            {/* Polyline Preview */}
+                                            {currentTool === OPERATIONS.POLYLINE && polylinePoints.length > 0 && (
+                                                <g>
+                                                    {/* Completed segments */}
+                                                    {polylinePoints.length >= 2 && (
+                                                        <path
+                                                            d={polylinePoints.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ' ' + p.y).join(' ')}
+                                                            fill="none"
+                                                            stroke={styles.stroke}
+                                                            strokeWidth={styles.strokeWidth}
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                        />
+                                                    )}
+                                                    {/* Point markers */}
+                                                    {polylinePoints.map((p, i) => (
+                                                        <circle key={i} cx={p.x} cy={p.y} r={4 / zoom} fill="#0ea5e9" stroke="#fff" strokeWidth={1 / zoom} />
+                                                    ))}
+                                                    {/* Instructions */}
+                                                    <text x={polylinePoints[0].x} y={polylinePoints[0].y - 15} fill="#0ea5e9" fontSize={12 / zoom} textAnchor="start">
+                                                        Double-click or Enter to finish
+                                                    </text>
+                                                </g>
+                                            )}
+
+                                            {/* Freehand Preview */}
+                                            {isDrawingFreehand && freehandPath.length > 1 && (
+                                                <path
+                                                    d={freehandPath.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ' ' + p.y).join(' ')}
+                                                    fill="none"
+                                                    stroke={styles.stroke}
+                                                    strokeWidth={styles.strokeWidth}
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    opacity={0.7}
+                                                />
                                             )}
 
                                             {/* Selection Box */}
