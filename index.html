@@ -387,7 +387,10 @@
             CALLOUT: 'callout',
             POLYGON: 'polygon',
             ARC: 'arc',
-            AREA: 'area'
+            AREA: 'area',
+            BEZIER: 'bezier',
+            CLOUD: 'cloud',
+            LEADER: 'leader'
         };
         
         const LAYERS = {
@@ -1232,6 +1235,26 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polygon points="4 18 12 4 20 18 4 18" fill="currentColor" fillOpacity="0.2"/>
                     <text x="12" y="16" fontSize="8" textAnchor="middle" fill="currentColor">A</text>
+                </svg>
+            ),
+            Bezier: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 18 Q12 4 20 18" strokeLinecap="round"/>
+                    <circle cx="4" cy="18" r="2" fill="currentColor"/>
+                    <circle cx="20" cy="18" r="2" fill="currentColor"/>
+                    <circle cx="12" cy="4" r="2" fill="none" strokeDasharray="2 1"/>
+                </svg>
+            ),
+            Cloud: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 12 Q4 8 8 8 Q8 4 12 4 Q16 4 16 8 Q20 8 20 12 Q20 16 16 16 Q16 20 12 20 Q8 20 8 16 Q4 16 4 12" fill="currentColor" fillOpacity="0.1"/>
+                </svg>
+            ),
+            Leader: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 18 L12 10 L20 10" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="4" cy="18" r="2" fill="currentColor"/>
+                    <line x1="14" y1="6" x2="22" y2="6" strokeWidth="1.5"/>
                 </svg>
             ),
             Layers: () => (
@@ -2483,9 +2506,13 @@
             const filteredSymbols = typeFilter === 'all' || typeFilter === 'symbol' ? filterItems(symbols) : [];
             const filteredMeasurements = typeFilter === 'all' || typeFilter === 'measurement' ? filterItems(measurements) : [];
             const filteredInfoPoints = typeFilter === 'all' || typeFilter === 'infoPoint' ? filterItems(infoPoints) : [];
+            const filteredBeziers = typeFilter === 'all' || typeFilter === 'bezier' ? filterItems(bezierCurves) : [];
+            const filteredClouds = typeFilter === 'all' || typeFilter === 'cloud' ? filterItems(cloudAnnotations) : [];
+            const filteredLeaders = typeFilter === 'all' || typeFilter === 'leader' ? filterItems(leaderLines) : [];
 
             const totalCount = filteredSnippets.length + filteredMasks.length + filteredElements.length +
-                              filteredSymbols.length + filteredMeasurements.length + filteredInfoPoints.length;
+                              filteredSymbols.length + filteredMeasurements.length + filteredInfoPoints.length +
+                              filteredBeziers.length + filteredClouds.length + filteredLeaders.length;
 
             return (
                 <div className="p-2 space-y-3">
@@ -2503,13 +2530,16 @@
                             onChange={(e) => setTypeFilter(e.target.value)}
                             className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-700 rounded"
                         >
-                            <option value="all">All Types ({snippets.length + masks.length + elements.length + symbols.length + measurements.length + infoPoints.length})</option>
+                            <option value="all">All Types ({snippets.length + masks.length + elements.length + symbols.length + measurements.length + infoPoints.length + bezierCurves.length + cloudAnnotations.length + leaderLines.length})</option>
                             <option value="snippet">Snippets ({snippets.length})</option>
                             <option value="mask">Masks ({masks.length})</option>
                             <option value="element">Elements ({elements.length})</option>
                             <option value="symbol">Symbols ({symbols.length})</option>
                             <option value="measurement">Measurements ({measurements.length})</option>
                             <option value="infoPoint">Info Points ({infoPoints.length})</option>
+                            <option value="bezier">Bezier Curves ({bezierCurves.length})</option>
+                            <option value="cloud">Cloud Annotations ({cloudAnnotations.length})</option>
+                            <option value="leader">Leader Lines ({leaderLines.length})</option>
                         </select>
                         {searchQuery && (
                             <div className="text-xs text-gray-500">
@@ -2592,6 +2622,45 @@
                             </div>
                             <div className="space-y-1">
                                 {filteredInfoPoints.map(p => renderItem(p, 'infoPoint'))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Bezier Curves */}
+                    {filteredBeziers.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                                <div className="w-4 h-4"><Icons.Bezier /></div>
+                                <span>Bezier Curves ({filteredBeziers.length})</span>
+                            </div>
+                            <div className="space-y-1">
+                                {filteredBeziers.map(b => renderItem(b, 'bezier'))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Cloud Annotations */}
+                    {filteredClouds.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                                <div className="w-4 h-4"><Icons.Cloud /></div>
+                                <span>Cloud Annotations ({filteredClouds.length})</span>
+                            </div>
+                            <div className="space-y-1">
+                                {filteredClouds.map(c => renderItem(c, 'cloud'))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Leader Lines */}
+                    {filteredLeaders.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                                <div className="w-4 h-4"><Icons.Leader /></div>
+                                <span>Leader Lines ({filteredLeaders.length})</span>
+                            </div>
+                            <div className="space-y-1">
+                                {filteredLeaders.map(l => renderItem(l, 'leader'))}
                             </div>
                         </div>
                     )}
@@ -3534,6 +3603,9 @@
             const [measurements, setMeasurements] = useState([]);
             const [cableAnnotations, setCableAnnotations] = useState([]);
             const [comments, setComments] = useState([]);
+            const [bezierCurves, setBezierCurves] = useState([]);
+            const [cloudAnnotations, setCloudAnnotations] = useState([]);
+            const [leaderLines, setLeaderLines] = useState([]);
             const [selectedComment, setSelectedComment] = useState(null);
             const [showCommentDialog, setShowCommentDialog] = useState(false);
             const [commentDialogPosition, setCommentDialogPosition] = useState({ x: 0, y: 0 });
@@ -3548,6 +3620,10 @@
             const [polygonPoints, setPolygonPoints] = useState([]);
             const [arcPoints, setArcPoints] = useState([]); // [start, control, end]
             const [areaPoints, setAreaPoints] = useState([]);
+            const [bezierPoints, setBezierPoints] = useState([]); // [start, control1, control2, end] for cubic bezier
+            const [cloudPoints, setCloudPoints] = useState([]); // points for cloud annotation
+            const [leaderPoints, setLeaderPoints] = useState([]); // [anchor, elbow, endpoint]
+            const [leaderText, setLeaderText] = useState('');
             const [freehandPath, setFreehandPath] = useState([]);
             const [isDrawingFreehand, setIsDrawingFreehand] = useState(false);
 
@@ -3605,7 +3681,9 @@
             const [smartGuidesEnabled, setSmartGuidesEnabled] = useState(true);
             const [alignmentGuides, setAlignmentGuides] = useState([]); // Active alignment guides to render
             const [styles, setStyles] = useState({ ...DEFAULT_STYLES });
-            const [leftPanelTab, setLeftPanelTab] = useState('tools'); // 'tools' | 'layers' | 'library' | 'symbols' | 'data'
+            const [leftPanelTab, setLeftPanelTab] = useState('tools'); // 'tools' | 'layers' | 'library' | 'pages'
+            const [librarySubTab, setLibrarySubTab] = useState('symbols'); // 'symbols' | 'snippets' | 'templates' | 'favorites'
+            const [layersSubTab, setLayersSubTab] = useState('layers'); // 'layers' | 'data'
             const [showCalibrationDialog, setShowCalibrationDialog] = useState(false);
             const [showExportMenu, setShowExportMenu] = useState(false);
             const [showShortcutsPanel, setShowShortcutsPanel] = useState(false);
@@ -3626,6 +3704,15 @@
                 const saved = localStorage.getItem('markupToolTheme');
                 return saved || 'dark';
             });
+
+            // Auto-save state
+            const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+            const [autoSaveVersions, setAutoSaveVersions] = useState(() => {
+                const saved = localStorage.getItem('markupToolAutoSaveVersions');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [showVersionHistory, setShowVersionHistory] = useState(false);
+            const [lastAutoSave, setLastAutoSave] = useState(null);
 
             // Resizable sidebar state
             const [leftSidebarWidth, setLeftSidebarWidth] = useState(256); // 256px = w-64
@@ -3652,6 +3739,76 @@
                 document.body.classList.add(theme === 'light' ? 'light-theme' : 'dark-theme');
                 localStorage.setItem('markupToolTheme', theme);
             }, [theme]);
+
+            // Track unsaved changes
+            useEffect(() => {
+                if (snippets.length > 0 || masks.length > 0 || elements.length > 0 || infoPoints.length > 0 || symbols.length > 0) {
+                    setHasUnsavedChanges(true);
+                }
+            }, [snippets, masks, elements, infoPoints, symbols, measurements]);
+
+            // Auto-save every 2 minutes
+            useEffect(() => {
+                const autoSaveInterval = setInterval(() => {
+                    if (hasUnsavedChanges && (snippets.length > 0 || masks.length > 0 || elements.length > 0 || infoPoints.length > 0 || symbols.length > 0)) {
+                        const saveData = {
+                            timestamp: Date.now(),
+                            date: new Date().toLocaleString(),
+                            pdfName: pdfData?.fileName || 'Untitled',
+                            data: {
+                                snippets,
+                                masks,
+                                elements,
+                                infoPoints,
+                                symbols,
+                                measurements,
+                                cableAnnotations,
+                                scaleCalibration,
+                                currentPage
+                            }
+                        };
+
+                        setAutoSaveVersions(prev => {
+                            const updated = [saveData, ...prev].slice(0, 10); // Keep last 10 versions
+                            localStorage.setItem('markupToolAutoSaveVersions', JSON.stringify(updated));
+                            return updated;
+                        });
+                        setLastAutoSave(new Date().toLocaleTimeString());
+                        setHasUnsavedChanges(false);
+                    }
+                }, 120000); // 2 minutes
+
+                return () => clearInterval(autoSaveInterval);
+            }, [hasUnsavedChanges, snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations, scaleCalibration, currentPage, pdfData]);
+
+            // Warn before leaving with unsaved changes
+            useEffect(() => {
+                const handleBeforeUnload = (e) => {
+                    if (hasUnsavedChanges) {
+                        e.preventDefault();
+                        e.returnValue = '';
+                    }
+                };
+                window.addEventListener('beforeunload', handleBeforeUnload);
+                return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+            }, [hasUnsavedChanges]);
+
+            // Restore from auto-save version
+            const restoreFromVersion = (version) => {
+                if (confirm('Restore this version? Current unsaved changes will be lost.')) {
+                    setSnippets(version.data.snippets || []);
+                    setMasks(version.data.masks || []);
+                    setElements(version.data.elements || []);
+                    setInfoPoints(version.data.infoPoints || []);
+                    setSymbols(version.data.symbols || []);
+                    setMeasurements(version.data.measurements || []);
+                    setCableAnnotations(version.data.cableAnnotations || []);
+                    if (version.data.scaleCalibration) setScaleCalibration(version.data.scaleCalibration);
+                    if (version.data.currentPage !== undefined) setCurrentPage(version.data.currentPage);
+                    setShowVersionHistory(false);
+                    setHasUnsavedChanges(false);
+                }
+            };
 
             // Sidebar resize handlers
             useEffect(() => {
@@ -3682,86 +3839,6 @@
                     };
                 }
             }, [isResizingLeft, isResizingRight]);
-
-            // Auto-save to localStorage
-            useEffect(() => {
-                // Load saved versions on mount
-                try {
-                    const saved = localStorage.getItem('markup_tool_versions');
-                    if (saved) {
-                        setAutoSaveVersions(JSON.parse(saved));
-                    }
-                } catch (e) {
-                    console.error('Failed to load auto-save versions:', e);
-                }
-            }, []);
-
-            // Auto-save effect
-            useEffect(() => {
-                if (!pdfData) return;
-
-                const saveData = () => {
-                    const saveState = {
-                        timestamp: Date.now(),
-                        date: new Date().toLocaleString(),
-                        fileName: pdfData?.fileName || 'Untitled',
-                        data: {
-                            snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations
-                        }
-                    };
-
-                    setAutoSaveVersions(prev => {
-                        const newVersions = [saveState, ...prev].slice(0, MAX_VERSIONS);
-                        try {
-                            localStorage.setItem('markup_tool_versions', JSON.stringify(newVersions));
-                        } catch (e) {
-                            console.error('Failed to save to localStorage:', e);
-                        }
-                        return newVersions;
-                    });
-                    setLastSaveTime(new Date());
-                    setHasUnsavedChanges(false);
-                };
-
-                // Initial save after loading
-                const timer = setInterval(saveData, AUTO_SAVE_INTERVAL);
-
-                return () => clearInterval(timer);
-            }, [pdfData, snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations]);
-
-            // Track unsaved changes
-            useEffect(() => {
-                if (pdfData) {
-                    setHasUnsavedChanges(true);
-                }
-            }, [snippets, masks, elements, infoPoints, symbols, measurements]);
-
-            // Warn before leaving with unsaved changes
-            useEffect(() => {
-                const handleBeforeUnload = (e) => {
-                    if (hasUnsavedChanges && pdfData) {
-                        e.preventDefault();
-                        e.returnValue = '';
-                    }
-                };
-                window.addEventListener('beforeunload', handleBeforeUnload);
-                return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-            }, [hasUnsavedChanges, pdfData]);
-
-            // Restore from version
-            const restoreVersion = (version) => {
-                if (version?.data) {
-                    setSnippets(version.data.snippets || []);
-                    setMasks(version.data.masks || []);
-                    setElements(version.data.elements || []);
-                    setInfoPoints(version.data.infoPoints || []);
-                    setSymbols(version.data.symbols || []);
-                    setMeasurements(version.data.measurements || []);
-                    setCableAnnotations(version.data.cableAnnotations || []);
-                    setShowVersionHistory(false);
-                    setHasUnsavedChanges(false);
-                }
-            };
 
             // Helper functions for align/distribute
             const getSelectedItems = () => {
@@ -3801,14 +3878,6 @@
             };
 
             const [showInfoSummary, setShowInfoSummary] = useState(false);
-
-            // Auto-save state
-            const [autoSaveVersions, setAutoSaveVersions] = useState([]);
-            const [lastSaveTime, setLastSaveTime] = useState(null);
-            const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-            const [showVersionHistory, setShowVersionHistory] = useState(false);
-            const AUTO_SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
-            const MAX_VERSIONS = 10;
 
             // Refs
             const canvasRef = useRef(null);
@@ -4063,6 +4132,43 @@
                                 m.visible !== false && pointToLineDistance(coords, m.x1, m.y1, m.x2, m.y2) <= 10
                             );
 
+                            // Check bezier curves
+                            const clickedBezier = bezierCurves.find(b => {
+                                if (b.visible === false || !b.points || b.points.length < 4) return false;
+                                // Check if near any of the 4 points or the control lines
+                                for (let i = 0; i < b.points.length; i++) {
+                                    if (distance(coords, b.points[i]) <= 10) return true;
+                                }
+                                return false;
+                            });
+
+                            // Check cloud annotations
+                            const clickedCloud = cloudAnnotations.find(c => {
+                                if (c.visible === false || !c.points || c.points.length < 3) return false;
+                                // Use polygon hit test
+                                let inside = false;
+                                for (let i = 0, j = c.points.length - 1; i < c.points.length; j = i++) {
+                                    const xi = c.points[i].x, yi = c.points[i].y;
+                                    const xj = c.points[j].x, yj = c.points[j].y;
+                                    if (((yi > coords.y) !== (yj > coords.y)) && (coords.x < (xj - xi) * (coords.y - yi) / (yj - yi) + xi)) {
+                                        inside = !inside;
+                                    }
+                                }
+                                return inside;
+                            });
+
+                            // Check leader lines
+                            const clickedLeader = leaderLines.find(l => {
+                                if (l.visible === false || !l.points || l.points.length < 3) return false;
+                                // Check if near any segment of the leader line
+                                for (let i = 0; i < l.points.length - 1; i++) {
+                                    if (pointToLineDistance(coords, l.points[i].x, l.points[i].y, l.points[i+1].x, l.points[i+1].y) <= 10) {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            });
+
                             // Check elements (rectangles, circles, lines, arrows, text, polylines, freehand)
                             const clickedElement = elements.find(el => {
                                 if (el.visible === false) return false;
@@ -4129,14 +4235,17 @@
                             if (clickedInfoPoint) { clickedItem = clickedInfoPoint; clickedItemType = 'infoPoint'; }
                             else if (clickedSymbol) { clickedItem = clickedSymbol; clickedItemType = 'symbol'; }
                             else if (clickedMeasurement) { clickedItem = clickedMeasurement; clickedItemType = 'measurement'; }
+                            else if (clickedBezier) { clickedItem = clickedBezier; clickedItemType = 'bezier'; }
+                            else if (clickedCloud) { clickedItem = clickedCloud; clickedItemType = 'cloud'; }
+                            else if (clickedLeader) { clickedItem = clickedLeader; clickedItemType = 'leader'; }
                             else if (clickedElement) { clickedItem = clickedElement; clickedItemType = 'element'; }
                             else if (clickedImageOverlay) { clickedItem = clickedImageOverlay; clickedItemType = 'imageOverlay'; }
                             else if (clickedSnippet) { clickedItem = clickedSnippet; clickedItemType = 'snippet'; }
                             else if (clickedMask) { clickedItem = clickedMask; clickedItemType = 'mask'; }
 
                             if (clickedItem) {
-                                // Ctrl+click for multi-select
-                                if (e.ctrlKey) {
+                                // Ctrl+click or Shift+click for multi-select
+                                if (e.ctrlKey || e.shiftKey) {
                                     const existingIndex = selectedIds.findIndex(s => s.id === clickedItem.id && s.type === clickedItemType);
                                     if (existingIndex >= 0) {
                                         // Remove from selection
@@ -4261,6 +4370,70 @@
                         case OPERATIONS.AREA:
                             // Add point for area measurement
                             setAreaPoints(prev => [...prev, coords]);
+                            break;
+
+                        case OPERATIONS.BEZIER:
+                            // Bezier curve: need 4 points for cubic (start, control1, control2, end)
+                            if (bezierPoints.length < 4) {
+                                const newPoints = [...bezierPoints, coords];
+                                setBezierPoints(newPoints);
+                                if (newPoints.length === 4) {
+                                    // Create the bezier curve
+                                    const newBezier = {
+                                        id: generateId(),
+                                        type: 'bezier',
+                                        name: `Bezier ${bezierCurves.length + 1}`,
+                                        points: newPoints,
+                                        stroke: styles.stroke,
+                                        strokeWidth: styles.strokeWidth,
+                                        fill: 'none',
+                                        rotation: 0,
+                                        visible: true,
+                                        locked: false
+                                    };
+                                    setBezierCurves(prev => [...prev, newBezier]);
+                                    setSelectedId(newBezier.id);
+                                    setSelectedType('bezier');
+                                    setBezierPoints([]);
+                                    addToHistory();
+                                }
+                            }
+                            break;
+
+                        case OPERATIONS.CLOUD:
+                            // Cloud annotation: add points for cloud boundary
+                            setCloudPoints(prev => [...prev, coords]);
+                            break;
+
+                        case OPERATIONS.LEADER:
+                            // Leader line: need 3 points (anchor, elbow, endpoint)
+                            if (leaderPoints.length < 3) {
+                                const newPoints = [...leaderPoints, coords];
+                                setLeaderPoints(newPoints);
+                                if (newPoints.length === 3) {
+                                    // Create the leader line with text input
+                                    setLeaderText('Label');
+                                    const newLeader = {
+                                        id: generateId(),
+                                        type: 'leader',
+                                        name: `Leader ${leaderLines.length + 1}`,
+                                        points: newPoints,
+                                        text: 'Label',
+                                        stroke: styles.stroke,
+                                        strokeWidth: styles.strokeWidth,
+                                        fontSize: styles.fontSize || 12,
+                                        arrowSize: 8,
+                                        rotation: 0,
+                                        visible: true,
+                                        locked: false
+                                    };
+                                    setLeaderLines(prev => [...prev, newLeader]);
+                                    setSelectedId(newLeader.id);
+                                    setSelectedType('leader');
+                                    setLeaderPoints([]);
+                                    addToHistory();
+                                }
+                            }
                             break;
 
                         case OPERATIONS.CALLOUT:
@@ -5097,6 +5270,7 @@
                             case 'k': setCurrentTool(OPERATIONS.COMMENT); break;
                             case 'y': setCurrentTool(OPERATIONS.POLYLINE); break;
                             case 'f': setCurrentTool(OPERATIONS.FREEHAND); break;
+                            case 'b': setCurrentTool(OPERATIONS.BEZIER); break;
                             case 'g': setShowGrid(prev => !prev); break;
                             case ';': setSnapEnabled(prev => !prev); break;
                             case "'": setSmartGuidesEnabled(prev => !prev); break;
@@ -5169,6 +5343,26 @@
                                     history.push({ snippets, masks, elements: [...elements, newArea], infoPoints, symbols, measurements, cableAnnotations });
                                     setAreaPoints([]);
                                 }
+                                // Finish cloud annotation (needs at least 3 points)
+                                if (currentTool === OPERATIONS.CLOUD && cloudPoints.length >= 3) {
+                                    const newCloud = {
+                                        id: generateId(),
+                                        type: 'cloud',
+                                        name: `Cloud ${cloudAnnotations.length + 1}`,
+                                        points: [...cloudPoints],
+                                        stroke: styles.stroke || '#ef4444',
+                                        strokeWidth: styles.strokeWidth || 2,
+                                        fill: 'rgba(255, 200, 200, 0.2)',
+                                        rotation: 0,
+                                        visible: true,
+                                        locked: false
+                                    };
+                                    setCloudAnnotations(prev => [...prev, newCloud]);
+                                    setSelectedId(newCloud.id);
+                                    setSelectedType('cloud');
+                                    setCloudPoints([]);
+                                    addToHistory();
+                                }
                                 break;
                             case 'escape':
                                 setSelectedId(null);
@@ -5176,11 +5370,14 @@
                                 setIsDrawing(false);
                                 setCalibrationStep(0);
                                 setCalibrationPoints([]);
-                                // Cancel polyline/freehand/polygon/arc drawing
+                                // Cancel polyline/freehand/polygon/arc/bezier/cloud/leader drawing
                                 setPolylinePoints([]);
                                 setPolygonPoints([]);
                                 setArcPoints([]);
                                 setAreaPoints([]);
+                                setBezierPoints([]);
+                                setCloudPoints([]);
+                                setLeaderPoints([]);
                                 setFreehandPath([]);
                                 setIsDrawingFreehand(false);
                                 break;
@@ -5195,6 +5392,9 @@
                                     const infoPointIds = selectedIds.filter(s => s.type === 'infoPoint').map(s => s.id).filter(id => !infoPoints.find(p => p.id === id)?.locked);
                                     const symbolIds = selectedIds.filter(s => s.type === 'symbol').map(s => s.id).filter(id => !symbols.find(s => s.id === id)?.locked);
                                     const measurementIds = selectedIds.filter(s => s.type === 'measurement').map(s => s.id).filter(id => !measurements.find(m => m.id === id)?.locked);
+                                    const bezierIds = selectedIds.filter(s => s.type === 'bezier').map(s => s.id).filter(id => !bezierCurves.find(b => b.id === id)?.locked);
+                                    const cloudIds = selectedIds.filter(s => s.type === 'cloud').map(s => s.id).filter(id => !cloudAnnotations.find(c => c.id === id)?.locked);
+                                    const leaderIds = selectedIds.filter(s => s.type === 'leader').map(s => s.id).filter(id => !leaderLines.find(l => l.id === id)?.locked);
 
                                     if (snippetIds.length) setSnippets(prev => prev.filter(s => !snippetIds.includes(s.id)));
                                     if (maskIds.length) setMasks(prev => prev.filter(m => !maskIds.includes(m.id)));
@@ -5202,6 +5402,9 @@
                                     if (infoPointIds.length) setInfoPoints(prev => prev.filter(p => !infoPointIds.includes(p.id)));
                                     if (symbolIds.length) setSymbols(prev => prev.filter(s => !symbolIds.includes(s.id)));
                                     if (measurementIds.length) setMeasurements(prev => prev.filter(m => !measurementIds.includes(m.id)));
+                                    if (bezierIds.length) setBezierCurves(prev => prev.filter(b => !bezierIds.includes(b.id)));
+                                    if (cloudIds.length) setCloudAnnotations(prev => prev.filter(c => !cloudIds.includes(c.id)));
+                                    if (leaderIds.length) setLeaderLines(prev => prev.filter(l => !leaderIds.includes(l.id)));
 
                                     setSelectedIds([]);
                                     setSelectedId(null);
@@ -5215,6 +5418,9 @@
                                     else if (selectedType === 'infoPoint') isLocked = infoPoints.find(p => p.id === selectedId)?.locked;
                                     else if (selectedType === 'symbol') isLocked = symbols.find(s => s.id === selectedId)?.locked;
                                     else if (selectedType === 'measurement') isLocked = measurements.find(m => m.id === selectedId)?.locked;
+                                    else if (selectedType === 'bezier') isLocked = bezierCurves.find(b => b.id === selectedId)?.locked;
+                                    else if (selectedType === 'cloud') isLocked = cloudAnnotations.find(c => c.id === selectedId)?.locked;
+                                    else if (selectedType === 'leader') isLocked = leaderLines.find(l => l.id === selectedId)?.locked;
 
                                     if (!isLocked) {
                                         if (selectedType === 'snippet') {
@@ -5229,6 +5435,12 @@
                                             setSymbols(prev => prev.filter(s => s.id !== selectedId));
                                         } else if (selectedType === 'measurement') {
                                             setMeasurements(prev => prev.filter(m => m.id !== selectedId));
+                                        } else if (selectedType === 'bezier') {
+                                            setBezierCurves(prev => prev.filter(b => b.id !== selectedId));
+                                        } else if (selectedType === 'cloud') {
+                                            setCloudAnnotations(prev => prev.filter(c => c.id !== selectedId));
+                                        } else if (selectedType === 'leader') {
+                                            setLeaderLines(prev => prev.filter(l => l.id !== selectedId));
                                         }
                                         setSelectedId(null);
                                         setSelectedType(null);
@@ -5278,6 +5490,18 @@
                         } else if (selectedType === 'measurement') {
                             setMeasurements(prev => prev.map(m =>
                                 m.id === selectedId ? { ...m, x1: m.x1 + dx, y1: m.y1 + dy, x2: m.x2 + dx, y2: m.y2 + dy } : m
+                            ));
+                        } else if (selectedType === 'bezier') {
+                            setBezierCurves(prev => prev.map(b =>
+                                b.id === selectedId ? { ...b, points: b.points.map(p => ({ x: p.x + dx, y: p.y + dy })) } : b
+                            ));
+                        } else if (selectedType === 'cloud') {
+                            setCloudAnnotations(prev => prev.map(c =>
+                                c.id === selectedId ? { ...c, points: c.points.map(p => ({ x: p.x + dx, y: p.y + dy })) } : c
+                            ));
+                        } else if (selectedType === 'leader') {
+                            setLeaderLines(prev => prev.map(l =>
+                                l.id === selectedId ? { ...l, points: l.points.map(p => ({ x: p.x + dx, y: p.y + dy })) } : l
                             ));
                         }
                     }
@@ -5829,7 +6053,10 @@
                         infoPoints: infoPoints,
                         symbols: symbols,
                         measurements: measurements,
-                        cableAnnotations: cableAnnotations
+                        cableAnnotations: cableAnnotations,
+                        bezierCurves: bezierCurves,
+                        cloudAnnotations: cloudAnnotations,
+                        leaderLines: leaderLines
                     }] : []
                 };
 
@@ -5870,6 +6097,9 @@
                         setSymbols(page.symbols || []);
                         setMeasurements(page.measurements || []);
                         setCableAnnotations(page.cableAnnotations || []);
+                        setBezierCurves(page.bezierCurves || []);
+                        setCloudAnnotations(page.cloudAnnotations || []);
+                        setLeaderLines(page.leaderLines || []);
                         setStyles(project.settings?.styles || DEFAULT_STYLES);
                         // Load scale calibration if available
                         if (project.settings?.scaleCalibration) {
@@ -6191,8 +6421,29 @@
                                 <span className="text-white font-bold text-sm">CM</span>
                             </div>
                             <span className="text-white font-semibold">Cable Markup Editor</span>
+                            {hasUnsavedChanges && (
+                                <span className="px-2 py-0.5 text-[10px] bg-yellow-500/20 text-yellow-400 rounded-full">
+                                    Unsaved
+                                </span>
+                            )}
+                            {lastAutoSave && (
+                                <span className="text-[10px] text-gray-500">
+                                    Auto-saved {lastAutoSave}
+                                </span>
+                            )}
                         </div>
-                        
+
+                        {/* Version History Button */}
+                        {autoSaveVersions.length > 0 && (
+                            <button
+                                className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center gap-1"
+                                onClick={() => setShowVersionHistory(true)}
+                                title="View auto-save history"
+                            >
+                                <Icons.Clock /> History ({autoSaveVersions.length})
+                            </button>
+                        )}
+
                         <div className="h-6 w-px bg-panel-border" />
                         
                         {/* File Menu */}
@@ -6418,71 +6669,39 @@
                             className="bg-panel-bg border-r border-panel-border flex flex-col flex-shrink-0"
                             style={{ width: leftSidebarWidth }}
                         >
-                            {/* Panel Tabs - Icon style */}
+                            {/* Panel Tabs - Consolidated to 4 main tabs */}
                             <div className="flex items-center border-b border-panel-border bg-[#1a1a1a]">
                                 <button
                                     className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'tools' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
                                     onClick={() => setLeftPanelTab('tools')}
-                                    title="Tools"
+                                    title="Drawing Tools"
                                 >
-                                    <div className="w-4 h-4"><Icons.Settings /></div>
+                                    <div className="w-5 h-5"><Icons.Settings /></div>
                                     <span className="text-[10px]">Tools</span>
-                                </button>
-                                <button
-                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'symbols' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
-                                    onClick={() => setLeftPanelTab('symbols')}
-                                    title="HV Symbols"
-                                >
-                                    <div className="w-4 h-4"><Icons.Component /></div>
-                                    <span className="text-[10px]">Symbols</span>
-                                </button>
-                                <button
-                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'layers' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
-                                    onClick={() => setLeftPanelTab('layers')}
-                                    title="Layers"
-                                >
-                                    <div className="w-4 h-4"><Icons.Layers /></div>
-                                    <span className="text-[10px]">Layers</span>
                                 </button>
                                 <button
                                     className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'library' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
                                     onClick={() => setLeftPanelTab('library')}
-                                    title="Snippet Library"
+                                    title="Symbols, Templates & Favorites"
                                 >
-                                    <div className="w-4 h-4"><Icons.Library /></div>
+                                    <div className="w-5 h-5"><Icons.Component /></div>
                                     <span className="text-[10px]">Library</span>
                                 </button>
                                 <button
-                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'data' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
-                                    onClick={() => setLeftPanelTab('data')}
-                                    title="Data View"
+                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'layers' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
+                                    onClick={() => setLeftPanelTab('layers')}
+                                    title="Layers & Data"
                                 >
-                                    <div className="w-4 h-4"><Icons.List /></div>
-                                    <span className="text-[10px]">Data</span>
+                                    <div className="w-5 h-5"><Icons.Layers /></div>
+                                    <span className="text-[10px]">Layers</span>
                                 </button>
                                 <button
                                     className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'pages' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
                                     onClick={() => setLeftPanelTab('pages')}
-                                    title="Page Thumbnails"
+                                    title="Page Navigation"
                                 >
-                                    <div className="w-4 h-4"><Icons.Pages /></div>
+                                    <div className="w-5 h-5"><Icons.Pages /></div>
                                     <span className="text-[10px]">Pages</span>
-                                </button>
-                                <button
-                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'templates' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
-                                    onClick={() => setLeftPanelTab('templates')}
-                                    title="Templates"
-                                >
-                                    <div className="w-4 h-4"><Icons.Template /></div>
-                                    <span className="text-[10px]">Templates</span>
-                                </button>
-                                <button
-                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'favorites' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
-                                    onClick={() => setLeftPanelTab('favorites')}
-                                    title="Favorites"
-                                >
-                                    <div className="w-4 h-4"><Icons.Star /></div>
-                                    <span className="text-[10px]">Favs</span>
                                 </button>
                             </div>
                             
@@ -6565,6 +6784,27 @@
                                                 shortcut="F"
                                                 active={currentTool === OPERATIONS.FREEHAND}
                                                 onClick={() => setCurrentTool(OPERATIONS.FREEHAND)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Bezier}
+                                                label="Bezier"
+                                                shortcut="B"
+                                                active={currentTool === OPERATIONS.BEZIER}
+                                                onClick={() => setCurrentTool(OPERATIONS.BEZIER)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Cloud}
+                                                label="Cloud"
+                                                shortcut=""
+                                                active={currentTool === OPERATIONS.CLOUD}
+                                                onClick={() => setCurrentTool(OPERATIONS.CLOUD)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Leader}
+                                                label="Leader"
+                                                shortcut=""
+                                                active={currentTool === OPERATIONS.LEADER}
+                                                onClick={() => setCurrentTool(OPERATIONS.LEADER)}
                                             />
                                         </div>
                                     </CollapsibleSection>
@@ -6984,42 +7224,156 @@
                                         </div>
                                     </CollapsibleSection>
                                 </div>
-                            ) : leftPanelTab === 'symbols' ? (
-                                <SymbolLibraryPanel
-                                    selectedSymbolId={selectedSymbolId}
-                                    onSelectSymbol={(id) => {
-                                        setSelectedSymbolId(id);
-                                        setCurrentTool(OPERATIONS.SYMBOL);
-                                    }}
-                                    symbolCategory={symbolCategory}
-                                    onSetCategory={setSymbolCategory}
-                                    favorites={favorites}
-                                    onToggleFavorite={handleToggleFavorite}
-                                />
-                            ) : leftPanelTab === 'layers' ? (
-                                <div className="flex-1 overflow-y-auto">
-                                    <LayerPanel
-                                        snippets={snippets}
-                                        masks={masks}
-                                        elements={elements}
-                                        infoPoints={infoPoints}
-                                        symbols={symbols}
-                                        measurements={measurements}
-                                        selectedId={selectedId}
-                                        onSelectItem={handleSelectItem}
-                                        onDeleteItem={handleDeleteItem}
-                                        onToggleVisibility={handleToggleVisibility}
-                                    />
-                                </div>
                             ) : leftPanelTab === 'library' ? (
-                                <div className="flex-1 overflow-y-auto">
-                                    <SnippetLibrary
-                                        library={snippetLibrary}
-                                        onSaveSnippet={handleSaveToLibrary}
-                                        onInsertSnippet={handleInsertFromLibrary}
-                                        onDeleteFromLibrary={handleDeleteFromLibrary}
-                                        currentSnippet={selectedSnippet}
-                                    />
+                                <div className="flex-1 flex flex-col overflow-hidden">
+                                    {/* Library Sub-tabs */}
+                                    <div className="flex border-b border-panel-border bg-[#1a1a1a] text-xs">
+                                        <button
+                                            className={`flex-1 py-2 px-1 transition-colors ${librarySubTab === 'symbols' ? 'text-accent border-b-2 border-accent' : 'text-gray-500 hover:text-gray-300'}`}
+                                            onClick={() => setLibrarySubTab('symbols')}
+                                        >Symbols</button>
+                                        <button
+                                            className={`flex-1 py-2 px-1 transition-colors ${librarySubTab === 'snippets' ? 'text-accent border-b-2 border-accent' : 'text-gray-500 hover:text-gray-300'}`}
+                                            onClick={() => setLibrarySubTab('snippets')}
+                                        >Snippets</button>
+                                        <button
+                                            className={`flex-1 py-2 px-1 transition-colors ${librarySubTab === 'templates' ? 'text-accent border-b-2 border-accent' : 'text-gray-500 hover:text-gray-300'}`}
+                                            onClick={() => setLibrarySubTab('templates')}
+                                        >Templates</button>
+                                        <button
+                                            className={`flex-1 py-2 px-1 transition-colors ${librarySubTab === 'favorites' ? 'text-accent border-b-2 border-accent' : 'text-gray-500 hover:text-gray-300'}`}
+                                            onClick={() => setLibrarySubTab('favorites')}
+                                        >
+                                            <span className="flex items-center justify-center gap-1">
+                                                <Icons.Star /> {favorites.length}
+                                            </span>
+                                        </button>
+                                    </div>
+                                    {/* Library Sub-tab Content */}
+                                    <div className="flex-1 overflow-y-auto">
+                                        {librarySubTab === 'symbols' ? (
+                                            <SymbolLibraryPanel
+                                                selectedSymbolId={selectedSymbolId}
+                                                onSelectSymbol={(id) => {
+                                                    setSelectedSymbolId(id);
+                                                    setCurrentTool(OPERATIONS.SYMBOL);
+                                                }}
+                                                symbolCategory={symbolCategory}
+                                                onSetCategory={setSymbolCategory}
+                                                favorites={favorites}
+                                                onToggleFavorite={handleToggleFavorite}
+                                            />
+                                        ) : librarySubTab === 'snippets' ? (
+                                            <SnippetLibrary
+                                                library={snippetLibrary}
+                                                onSaveSnippet={handleSaveToLibrary}
+                                                onInsertSnippet={handleInsertFromLibrary}
+                                                onDeleteFromLibrary={handleDeleteFromLibrary}
+                                                currentSnippet={selectedSnippet}
+                                            />
+                                        ) : librarySubTab === 'templates' ? (
+                                            <div className="p-3">
+                                                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-3">Element Templates</div>
+                                                {templates.length > 0 ? (
+                                                    <div className="space-y-2">
+                                                        {templates.map(template => (
+                                                            <div
+                                                                key={template.id}
+                                                                className="p-3 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer"
+                                                                onClick={() => handleApplyTemplate(template)}
+                                                            >
+                                                                <div className="font-medium text-sm">{template.name}</div>
+                                                                <div className="text-xs text-gray-400 mt-1">{template.description || `${template.elements?.length || 0} elements`}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center text-gray-500 py-8">
+                                                        <p className="text-sm">No templates saved</p>
+                                                        <p className="text-xs mt-1">Select elements and save as template</p>
+                                                    </div>
+                                                )}
+                                                {selectedIds.length > 0 && (
+                                                    <button
+                                                        className="w-full mt-4 px-3 py-2 bg-accent/20 text-accent rounded hover:bg-accent/30 text-sm"
+                                                        onClick={() => setShowTemplateDialog(true)}
+                                                    >
+                                                        Save Selection as Template
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : librarySubTab === 'favorites' ? (
+                                            <div className="p-3">
+                                                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-3">Favorite Symbols ({favorites.length})</div>
+                                                {favorites.length > 0 ? (
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        {favorites.map(symbolId => {
+                                                            const symbolDef = HV_SYMBOLS[symbolId];
+                                                            if (!symbolDef) return null;
+                                                            return (
+                                                                <div
+                                                                    key={symbolId}
+                                                                    className={`p-2 rounded-lg cursor-pointer text-center transition-all ${selectedSymbolId === symbolId ? 'bg-accent/20 ring-2 ring-accent' : 'bg-gray-800 hover:bg-gray-700'}`}
+                                                                    onClick={() => {
+                                                                        setSelectedSymbolId(symbolId);
+                                                                        setCurrentTool(OPERATIONS.SYMBOL);
+                                                                    }}
+                                                                >
+                                                                    <div className="w-10 h-10 mx-auto text-accent" dangerouslySetInnerHTML={{ __html: symbolDef.svg }} />
+                                                                    <div className="text-[10px] text-gray-400 mt-1 truncate">{symbolDef.name}</div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center text-gray-500 py-8">
+                                                        <p className="text-sm">No favorites yet</p>
+                                                        <p className="text-xs mt-1">Right-click symbols to add to favorites</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            ) : leftPanelTab === 'layers' ? (
+                                <div className="flex-1 flex flex-col overflow-hidden">
+                                    {/* Layers Sub-tabs */}
+                                    <div className="flex border-b border-panel-border bg-[#1a1a1a] text-xs">
+                                        <button
+                                            className={`flex-1 py-2 px-2 transition-colors ${layersSubTab === 'layers' ? 'text-accent border-b-2 border-accent' : 'text-gray-500 hover:text-gray-300'}`}
+                                            onClick={() => setLayersSubTab('layers')}
+                                        >Layers</button>
+                                        <button
+                                            className={`flex-1 py-2 px-2 transition-colors ${layersSubTab === 'data' ? 'text-accent border-b-2 border-accent' : 'text-gray-500 hover:text-gray-300'}`}
+                                            onClick={() => setLayersSubTab('data')}
+                                        >Data View</button>
+                                    </div>
+                                    {/* Layers Sub-tab Content */}
+                                    <div className="flex-1 overflow-y-auto">
+                                        {layersSubTab === 'layers' ? (
+                                            <LayerPanel
+                                                snippets={snippets}
+                                                masks={masks}
+                                                elements={elements}
+                                                infoPoints={infoPoints}
+                                                symbols={symbols}
+                                                measurements={measurements}
+                                                selectedId={selectedId}
+                                                onSelectItem={handleSelectItem}
+                                                onDeleteItem={handleDeleteItem}
+                                                onToggleVisibility={handleToggleVisibility}
+                                            />
+                                        ) : layersSubTab === 'data' ? (
+                                            <InfoPointDataView
+                                                infoPoints={infoPoints}
+                                                onUpdateInfoPoint={handleUpdateInfoPoint}
+                                                onSelectInfoPoint={(point) => {
+                                                    setSelectedId(point.id);
+                                                    setSelectedType('infoPoint');
+                                                }}
+                                            />
+                                        ) : null}
+                                    </div>
                                 </div>
                             ) : leftPanelTab === 'pages' ? (
                                 <div className="flex-1 overflow-y-auto p-3">
@@ -7056,124 +7410,7 @@
                                         </div>
                                     )}
                                 </div>
-                            ) : leftPanelTab === 'templates' ? (
-                                <div className="flex-1 overflow-y-auto p-3">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider">Templates</div>
-                                        <button
-                                            className="text-xs px-2 py-1 bg-accent text-white rounded hover:bg-accent-hover"
-                                            onClick={() => setShowTemplateDialog(true)}
-                                            disabled={elements.length === 0 && symbols.length === 0 && infoPoints.length === 0}
-                                            title="Save current elements as template"
-                                        >
-                                            + Save
-                                        </button>
-                                    </div>
-                                    {templateLibrary.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {templateLibrary.map((template) => (
-                                                <div
-                                                    key={template.id}
-                                                    className="bg-gray-800 rounded-lg p-3 border border-panel-border"
-                                                >
-                                                    <div className="flex items-start justify-between mb-1">
-                                                        <div className="font-medium text-sm text-white">{template.name}</div>
-                                                        <button
-                                                            className="text-gray-500 hover:text-red-400 p-1"
-                                                            onClick={() => handleDeleteTemplate(template.id)}
-                                                            title="Delete template"
-                                                        >
-                                                            <div className="w-3 h-3"><Icons.Trash /></div>
-                                                        </button>
-                                                    </div>
-                                                    {template.description && (
-                                                        <p className="text-xs text-gray-400 mb-2">{template.description}</p>
-                                                    )}
-                                                    <div className="text-[10px] text-gray-500 mb-2">
-                                                        {template.data.elements.length} elements, {template.data.symbols.length} symbols, {template.data.infoPoints.length} info points
-                                                    </div>
-                                                    <button
-                                                        className="w-full text-xs py-1.5 bg-accent/20 text-accent rounded hover:bg-accent/30"
-                                                        onClick={() => handleApplyTemplate(template)}
-                                                    >
-                                                        Apply Template
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center text-gray-500 py-8">
-                                            <div className="w-12 h-12 mx-auto mb-2 text-gray-600">
-                                                <Icons.Template />
-                                            </div>
-                                            <p className="text-sm">No templates saved</p>
-                                            <p className="text-xs mt-1">Add elements and save as template</p>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : leftPanelTab === 'favorites' ? (
-                                <div className="flex-1 overflow-y-auto p-3">
-                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-3">Favorite Symbols</div>
-                                    {favorites.length > 0 ? (
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {favorites.map((fav, idx) => {
-                                                const symbolDef = HV_SYMBOLS[fav.symbolId];
-                                                if (!symbolDef) return null;
-                                                return (
-                                                    <div
-                                                        key={idx}
-                                                        className="relative group bg-gray-800 rounded-lg p-2 cursor-pointer hover:bg-gray-700 border border-panel-border"
-                                                        onClick={() => {
-                                                            setSelectedSymbolId(fav.symbolId);
-                                                            setCurrentTool(OPERATIONS.SYMBOL);
-                                                        }}
-                                                        title={symbolDef.name}
-                                                    >
-                                                        <div
-                                                            className="w-full aspect-square flex items-center justify-center"
-                                                            dangerouslySetInnerHTML={{ __html: symbolDef.svg }}
-                                                        />
-                                                        <div className="text-[10px] text-gray-400 text-center truncate mt-1">{symbolDef.name}</div>
-                                                        <button
-                                                            className="absolute top-1 right-1 w-4 h-4 bg-red-500/80 rounded-full text-white opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const newFavs = favorites.filter((_, i) => i !== idx);
-                                                                setFavorites(newFavs);
-                                                                localStorage.setItem('markupFavorites', JSON.stringify(newFavs));
-                                                            }}
-                                                            title="Remove from favorites"
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center text-gray-500 py-8">
-                                            <div className="w-12 h-12 mx-auto mb-2 text-gray-600">
-                                                <Icons.Star />
-                                            </div>
-                                            <p className="text-sm">No favorites yet</p>
-                                            <p className="text-xs mt-1">Right-click symbols to add to favorites</p>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="flex-1 overflow-hidden">
-                                    <DataViewPanel
-                                        infoPoints={infoPoints}
-                                        selectedId={selectedId}
-                                        onSelectItem={handleSelectItem}
-                                        onUpdateInfoPoint={(id, updates) => {
-                                            setInfoPoints(prev => prev.map(p =>
-                                                p.id === id ? { ...p, ...updates } : p
-                                            ));
-                                        }}
-                                    />
-                                </div>
-                            )}
+                            ) : null}
                         </aside>
 
                         {/* Left Resize Handle */}
@@ -7926,6 +8163,134 @@
                                                 }
                                             })}
 
+                                            {/* Bezier Curves */}
+                                            {bezierCurves.filter(b => b.visible !== false).map(bezier => {
+                                                const isSelected = selectedId === bezier.id || selectedIds.some(s => s.id === bezier.id && s.type === 'bezier');
+                                                const [p0, p1, p2, p3] = bezier.points;
+                                                const pathD = `M ${p0.x} ${p0.y} C ${p1.x} ${p1.y}, ${p2.x} ${p2.y}, ${p3.x} ${p3.y}`;
+                                                return (
+                                                    <g key={bezier.id} style={{ cursor: currentTool === OPERATIONS.SELECT ? 'pointer' : 'default' }}>
+                                                        <path
+                                                            d={pathD}
+                                                            fill={bezier.fill || 'none'}
+                                                            stroke={bezier.stroke}
+                                                            strokeWidth={bezier.strokeWidth}
+                                                            strokeLinecap="round"
+                                                        />
+                                                        {isSelected && (
+                                                            <>
+                                                                {/* Control point handles */}
+                                                                <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#0ea5e9" strokeWidth={1 / zoom} strokeDasharray={`${3 / zoom}`} />
+                                                                <line x1={p3.x} y1={p3.y} x2={p2.x} y2={p2.y} stroke="#0ea5e9" strokeWidth={1 / zoom} strokeDasharray={`${3 / zoom}`} />
+                                                                <circle cx={p0.x} cy={p0.y} r={5 / zoom} fill="#0ea5e9" stroke="#fff" strokeWidth={1 / zoom} />
+                                                                <circle cx={p1.x} cy={p1.y} r={4 / zoom} fill="#fff" stroke="#0ea5e9" strokeWidth={1 / zoom} />
+                                                                <circle cx={p2.x} cy={p2.y} r={4 / zoom} fill="#fff" stroke="#0ea5e9" strokeWidth={1 / zoom} />
+                                                                <circle cx={p3.x} cy={p3.y} r={5 / zoom} fill="#0ea5e9" stroke="#fff" strokeWidth={1 / zoom} />
+                                                            </>
+                                                        )}
+                                                    </g>
+                                                );
+                                            })}
+
+                                            {/* Cloud Annotations */}
+                                            {cloudAnnotations.filter(c => c.visible !== false).map(cloud => {
+                                                const isSelected = selectedId === cloud.id || selectedIds.some(s => s.id === cloud.id && s.type === 'cloud');
+                                                // Generate cloud path with bumpy edges
+                                                const points = cloud.points;
+                                                if (points.length < 3) return null;
+
+                                                // Create cloud bumps along the polygon edges
+                                                let pathParts = [];
+                                                for (let i = 0; i < points.length; i++) {
+                                                    const curr = points[i];
+                                                    const next = points[(i + 1) % points.length];
+                                                    const dx = next.x - curr.x;
+                                                    const dy = next.y - curr.y;
+                                                    const dist = Math.sqrt(dx * dx + dy * dy);
+                                                    const numBumps = Math.max(2, Math.floor(dist / 20));
+
+                                                    for (let j = 0; j < numBumps; j++) {
+                                                        const t1 = j / numBumps;
+                                                        const t2 = (j + 1) / numBumps;
+                                                        const x1 = curr.x + dx * t1;
+                                                        const y1 = curr.y + dy * t1;
+                                                        const x2 = curr.x + dx * t2;
+                                                        const y2 = curr.y + dy * t2;
+                                                        const mx = (x1 + x2) / 2;
+                                                        const my = (y1 + y2) / 2;
+                                                        // Outward bump
+                                                        const nx = -dy / dist * 8;
+                                                        const ny = dx / dist * 8;
+                                                        if (i === 0 && j === 0) {
+                                                            pathParts.push(`M ${x1} ${y1}`);
+                                                        }
+                                                        pathParts.push(`Q ${mx + nx} ${my + ny}, ${x2} ${y2}`);
+                                                    }
+                                                }
+                                                const pathD = pathParts.join(' ') + ' Z';
+
+                                                return (
+                                                    <g key={cloud.id} style={{ cursor: currentTool === OPERATIONS.SELECT ? 'pointer' : 'default' }}>
+                                                        <path
+                                                            d={pathD}
+                                                            fill={cloud.fill || 'rgba(255, 200, 200, 0.2)'}
+                                                            stroke={cloud.stroke || '#ef4444'}
+                                                            strokeWidth={cloud.strokeWidth || 2}
+                                                        />
+                                                        {isSelected && points.map((p, i) => (
+                                                            <circle key={i} cx={p.x} cy={p.y} r={4 / zoom} fill="#0ea5e9" />
+                                                        ))}
+                                                    </g>
+                                                );
+                                            })}
+
+                                            {/* Leader Lines */}
+                                            {leaderLines.filter(l => l.visible !== false).map(leader => {
+                                                const isSelected = selectedId === leader.id || selectedIds.some(s => s.id === leader.id && s.type === 'leader');
+                                                const [anchor, elbow, endpoint] = leader.points;
+                                                const arrowSize = leader.arrowSize || 8;
+                                                // Calculate arrow angle
+                                                const angle = Math.atan2(elbow.y - anchor.y, elbow.x - anchor.x);
+                                                const arrowPath = `M ${anchor.x} ${anchor.y} L ${anchor.x + arrowSize * Math.cos(angle - Math.PI / 6)} ${anchor.y + arrowSize * Math.sin(angle - Math.PI / 6)} M ${anchor.x} ${anchor.y} L ${anchor.x + arrowSize * Math.cos(angle + Math.PI / 6)} ${anchor.y + arrowSize * Math.sin(angle + Math.PI / 6)}`;
+
+                                                return (
+                                                    <g key={leader.id} style={{ cursor: currentTool === OPERATIONS.SELECT ? 'pointer' : 'default' }}>
+                                                        {/* Leader line path */}
+                                                        <path
+                                                            d={`M ${anchor.x} ${anchor.y} L ${elbow.x} ${elbow.y} L ${endpoint.x} ${endpoint.y}`}
+                                                            fill="none"
+                                                            stroke={leader.stroke}
+                                                            strokeWidth={leader.strokeWidth}
+                                                        />
+                                                        {/* Arrow head */}
+                                                        <path
+                                                            d={arrowPath}
+                                                            fill="none"
+                                                            stroke={leader.stroke}
+                                                            strokeWidth={leader.strokeWidth}
+                                                            strokeLinecap="round"
+                                                        />
+                                                        {/* Text label */}
+                                                        <text
+                                                            x={endpoint.x + 5}
+                                                            y={endpoint.y + 4}
+                                                            fontSize={leader.fontSize || 12}
+                                                            fill={leader.stroke}
+                                                            style={{ userSelect: 'none' }}
+                                                        >
+                                                            {leader.text}
+                                                        </text>
+                                                        {isSelected && (
+                                                            <>
+                                                                <circle cx={anchor.x} cy={anchor.y} r={4 / zoom} fill="#0ea5e9" />
+                                                                <circle cx={elbow.x} cy={elbow.y} r={4 / zoom} fill="#0ea5e9" />
+                                                                <circle cx={endpoint.x} cy={endpoint.y} r={4 / zoom} fill="#0ea5e9" />
+                                                            </>
+                                                        )}
+                                                    </g>
+                                                );
+                                            })}
+
                                             {/* Symbols */}
                                             {symbols.filter(s => s.visible !== false).map(symbol => {
                                                 const isSelected = selectedId === symbol.id || selectedIds.some(s => s.id === symbol.id && s.type === 'symbol');
@@ -8407,6 +8772,101 @@
                                                 </g>
                                             )}
 
+                                            {/* Bezier Preview */}
+                                            {currentTool === OPERATIONS.BEZIER && bezierPoints.length > 0 && (
+                                                <g>
+                                                    {/* Preview curve */}
+                                                    {bezierPoints.length >= 2 && (
+                                                        <path
+                                                            d={bezierPoints.length === 2
+                                                                ? `M ${bezierPoints[0].x} ${bezierPoints[0].y} L ${bezierPoints[1].x} ${bezierPoints[1].y}`
+                                                                : bezierPoints.length === 3
+                                                                ? `M ${bezierPoints[0].x} ${bezierPoints[0].y} Q ${bezierPoints[1].x} ${bezierPoints[1].y} ${bezierPoints[2].x} ${bezierPoints[2].y}`
+                                                                : `M ${bezierPoints[0].x} ${bezierPoints[0].y} C ${bezierPoints[1].x} ${bezierPoints[1].y}, ${bezierPoints[2].x} ${bezierPoints[2].y}, ${bezierPoints[3].x} ${bezierPoints[3].y}`
+                                                            }
+                                                            fill="none"
+                                                            stroke={styles.stroke}
+                                                            strokeWidth={styles.strokeWidth}
+                                                            strokeDasharray="5,5"
+                                                            opacity={0.6}
+                                                        />
+                                                    )}
+                                                    {/* Control point lines */}
+                                                    {bezierPoints.length >= 2 && (
+                                                        <line x1={bezierPoints[0].x} y1={bezierPoints[0].y} x2={bezierPoints[1].x} y2={bezierPoints[1].y}
+                                                            stroke="#0ea5e9" strokeWidth={1 / zoom} strokeDasharray={`${3 / zoom}`} />
+                                                    )}
+                                                    {bezierPoints.length >= 3 && (
+                                                        <line x1={bezierPoints[2].x} y1={bezierPoints[2].y} x2={bezierPoints[bezierPoints.length - 1].x} y2={bezierPoints[bezierPoints.length - 1].y}
+                                                            stroke="#0ea5e9" strokeWidth={1 / zoom} strokeDasharray={`${3 / zoom}`} />
+                                                    )}
+                                                    {/* Point markers */}
+                                                    {bezierPoints.map((p, i) => (
+                                                        <circle key={i} cx={p.x} cy={p.y} r={4 / zoom}
+                                                            fill={i === 0 || i === 3 ? '#0ea5e9' : '#22c55e'}
+                                                            stroke="#fff" strokeWidth={1 / zoom} />
+                                                    ))}
+                                                    {/* Instructions */}
+                                                    <text x={bezierPoints[0].x} y={bezierPoints[0].y - 15} fill="#0ea5e9" fontSize={12 / zoom} textAnchor="start">
+                                                        {bezierPoints.length === 1 ? 'Click for control point 1' :
+                                                         bezierPoints.length === 2 ? 'Click for control point 2' :
+                                                         'Click for end point'}
+                                                    </text>
+                                                </g>
+                                            )}
+
+                                            {/* Cloud Preview */}
+                                            {currentTool === OPERATIONS.CLOUD && cloudPoints.length > 0 && (
+                                                <g>
+                                                    {/* Preview polygon */}
+                                                    {cloudPoints.length >= 2 && (
+                                                        <path
+                                                            d={cloudPoints.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ' ' + p.y).join(' ')}
+                                                            fill="rgba(255, 200, 200, 0.1)"
+                                                            stroke={styles.stroke || '#ef4444'}
+                                                            strokeWidth={styles.strokeWidth}
+                                                            strokeDasharray="5,5"
+                                                            opacity={0.6}
+                                                        />
+                                                    )}
+                                                    {/* Point markers */}
+                                                    {cloudPoints.map((p, i) => (
+                                                        <circle key={i} cx={p.x} cy={p.y} r={4 / zoom} fill="#ef4444" stroke="#fff" strokeWidth={1 / zoom} />
+                                                    ))}
+                                                    {/* Instructions */}
+                                                    <text x={cloudPoints[0].x} y={cloudPoints[0].y - 15} fill="#ef4444" fontSize={12 / zoom} textAnchor="start">
+                                                        Double-click or Enter to close cloud
+                                                    </text>
+                                                </g>
+                                            )}
+
+                                            {/* Leader Preview */}
+                                            {currentTool === OPERATIONS.LEADER && leaderPoints.length > 0 && (
+                                                <g>
+                                                    {/* Preview line */}
+                                                    {leaderPoints.length >= 2 && (
+                                                        <path
+                                                            d={leaderPoints.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ' ' + p.y).join(' ')}
+                                                            fill="none"
+                                                            stroke={styles.stroke}
+                                                            strokeWidth={styles.strokeWidth}
+                                                            strokeDasharray="5,5"
+                                                            opacity={0.6}
+                                                        />
+                                                    )}
+                                                    {/* Point markers */}
+                                                    {leaderPoints.map((p, i) => (
+                                                        <circle key={i} cx={p.x} cy={p.y} r={4 / zoom}
+                                                            fill={i === 0 ? '#0ea5e9' : '#22c55e'}
+                                                            stroke="#fff" strokeWidth={1 / zoom} />
+                                                    ))}
+                                                    {/* Instructions */}
+                                                    <text x={leaderPoints[0].x} y={leaderPoints[0].y - 15} fill="#0ea5e9" fontSize={12 / zoom} textAnchor="start">
+                                                        {leaderPoints.length === 1 ? 'Click for elbow point' : 'Click for text endpoint'}
+                                                    </text>
+                                                </g>
+                                            )}
+
                                             {/* Alignment Guides */}
                                             {alignmentGuides.map((guide, idx) => (
                                                 guide.type === 'vertical' ? (
@@ -8575,19 +9035,158 @@
                             <div className="p-3 border-b border-panel-border bg-[#1a1a1a] flex items-center gap-2">
                                 <div className="w-4 h-4 text-accent"><Icons.Settings /></div>
                                 <h3 className="text-sm font-medium text-gray-300">Properties</h3>
-                                {selectedItem && (
+                                {selectedIds.length > 1 ? (
+                                    <span className="ml-auto px-2 py-0.5 text-[10px] bg-purple-500/20 text-purple-400 rounded-full">
+                                        {selectedIds.length} selected
+                                    </span>
+                                ) : selectedItem && (
                                     <span className="ml-auto px-2 py-0.5 text-[10px] bg-accent/20 text-accent rounded-full">
                                         {selectedType}
                                     </span>
                                 )}
                             </div>
                             <div className="flex-1 overflow-y-auto">
-                                <PropertiesPanel
-                                    selection={selectedItem}
-                                    onUpdate={handleUpdateSelected}
-                                    styles={styles}
-                                    onStyleChange={(updates) => setStyles(prev => ({ ...prev, ...updates }))}
-                                />
+                                {selectedIds.length > 1 ? (
+                                    /* Batch Edit Panel */
+                                    <div className="p-4 space-y-4">
+                                        <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">
+                                            Batch Edit ({selectedIds.length} items)
+                                        </div>
+
+                                        {/* Batch Color */}
+                                        <div className="space-y-2">
+                                            <div className="text-xs text-gray-500">Apply Color to All</div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="color"
+                                                    defaultValue="#3b82f6"
+                                                    onChange={(e) => {
+                                                        const color = e.target.value;
+                                                        applyToSelected(item => ({ stroke: color, color: color }));
+                                                    }}
+                                                    className="w-10 h-8"
+                                                />
+                                                <button
+                                                    className="flex-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded"
+                                                    onClick={() => applyToSelected(item => ({ stroke: '#ef4444' }))}
+                                                >Red</button>
+                                                <button
+                                                    className="flex-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded"
+                                                    onClick={() => applyToSelected(item => ({ stroke: '#22c55e' }))}
+                                                >Green</button>
+                                                <button
+                                                    className="flex-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded"
+                                                    onClick={() => applyToSelected(item => ({ stroke: '#3b82f6' }))}
+                                                >Blue</button>
+                                            </div>
+                                        </div>
+
+                                        {/* Batch Stroke Width */}
+                                        <div className="space-y-2">
+                                            <div className="text-xs text-gray-500">Stroke Width</div>
+                                            <div className="flex gap-2">
+                                                {[1, 2, 3, 5, 8].map(w => (
+                                                    <button
+                                                        key={w}
+                                                        className="flex-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded"
+                                                        onClick={() => applyToSelected(item => ({ strokeWidth: w }))}
+                                                    >{w}px</button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Batch Visibility */}
+                                        <div className="space-y-2">
+                                            <div className="text-xs text-gray-500">Visibility</div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    className="flex-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center gap-1"
+                                                    onClick={() => applyToSelected(item => ({ visible: true }))}
+                                                >
+                                                    <Icons.Eye /> Show All
+                                                </button>
+                                                <button
+                                                    className="flex-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center gap-1"
+                                                    onClick={() => applyToSelected(item => ({ visible: false }))}
+                                                >
+                                                    <Icons.EyeOff /> Hide All
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Batch Lock */}
+                                        <div className="space-y-2">
+                                            <div className="text-xs text-gray-500">Lock State</div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    className="flex-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center gap-1"
+                                                    onClick={() => applyToSelected(item => ({ locked: true }))}
+                                                >
+                                                    <Icons.Lock /> Lock All
+                                                </button>
+                                                <button
+                                                    className="flex-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center gap-1"
+                                                    onClick={() => applyToSelected(item => ({ locked: false }))}
+                                                >
+                                                    <Icons.Unlock /> Unlock All
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Batch Delete */}
+                                        <div className="pt-4 border-t border-panel-border">
+                                            <button
+                                                className="w-full px-3 py-2 text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded flex items-center justify-center gap-2"
+                                                onClick={() => {
+                                                    if (confirm(`Delete ${selectedIds.length} selected items?`)) {
+                                                        history.push({ snippets: [...snippets], masks: [...masks], elements: [...elements], infoPoints: [...infoPoints], symbols: [...symbols], measurements: [...measurements], cableAnnotations: [...cableAnnotations] });
+                                                        const snippetIds = selectedIds.filter(s => s.type === 'snippet').map(s => s.id);
+                                                        const maskIds = selectedIds.filter(s => s.type === 'mask').map(s => s.id);
+                                                        const elementIds = selectedIds.filter(s => s.type === 'element').map(s => s.id);
+                                                        const infoPointIds = selectedIds.filter(s => s.type === 'infoPoint').map(s => s.id);
+                                                        const symbolIds = selectedIds.filter(s => s.type === 'symbol').map(s => s.id);
+                                                        const measurementIds = selectedIds.filter(s => s.type === 'measurement').map(s => s.id);
+                                                        setSnippets(prev => prev.filter(s => !snippetIds.includes(s.id)));
+                                                        setMasks(prev => prev.filter(m => !maskIds.includes(m.id)));
+                                                        setElements(prev => prev.filter(e => !elementIds.includes(e.id)));
+                                                        setInfoPoints(prev => prev.filter(p => !infoPointIds.includes(p.id)));
+                                                        setSymbols(prev => prev.filter(s => !symbolIds.includes(s.id)));
+                                                        setMeasurements(prev => prev.filter(m => !measurementIds.includes(m.id)));
+                                                        setSelectedIds([]);
+                                                        setSelectedId(null);
+                                                        setSelectedType(null);
+                                                    }
+                                                }}
+                                            >
+                                                <Icons.Trash /> Delete All Selected
+                                            </button>
+                                        </div>
+
+                                        {/* Selection Summary */}
+                                        <div className="pt-4 border-t border-panel-border text-xs text-gray-500">
+                                            <div className="mb-2">Selection breakdown:</div>
+                                            {(() => {
+                                                const counts = {};
+                                                selectedIds.forEach(s => {
+                                                    counts[s.type] = (counts[s.type] || 0) + 1;
+                                                });
+                                                return Object.entries(counts).map(([type, count]) => (
+                                                    <div key={type} className="flex justify-between">
+                                                        <span className="capitalize">{type}s</span>
+                                                        <span>{count}</span>
+                                                    </div>
+                                                ));
+                                            })()}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <PropertiesPanel
+                                        selection={selectedItem}
+                                        onUpdate={handleUpdateSelected}
+                                        styles={styles}
+                                        onStyleChange={(updates) => setStyles(prev => ({ ...prev, ...updates }))}
+                                    />
+                                )}
                             </div>
                             
                             {/* Page Navigation */}
@@ -8655,58 +9254,6 @@
                         calibrationPoints={calibrationPoints}
                     />
 
-                    {/* Version History Modal */}
-                    {showVersionHistory && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowVersionHistory(false)}>
-                            <div className="bg-panel-bg rounded-lg shadow-xl w-96 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-                                <div className="p-4 border-b border-panel-border flex items-center justify-between">
-                                    <h2 className="text-lg font-semibold">Version History</h2>
-                                    <button onClick={() => setShowVersionHistory(false)} className="text-gray-400 hover:text-white">
-                                        <Icons.Close />
-                                    </button>
-                                </div>
-                                <div className="p-4 overflow-y-auto max-h-[60vh]">
-                                    {autoSaveVersions.length === 0 ? (
-                                        <div className="text-center text-gray-500 py-8">No saved versions yet</div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {autoSaveVersions.map((version, idx) => (
-                                                <div
-                                                    key={version.timestamp}
-                                                    className="p-3 bg-gray-800 rounded hover:bg-gray-700 cursor-pointer"
-                                                    onClick={() => restoreVersion(version)}
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-medium">{version.fileName}</span>
-                                                        {idx === 0 && <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded">Latest</span>}
-                                                    </div>
-                                                    <div className="text-xs text-gray-400 mt-1">{version.date}</div>
-                                                    <div className="text-xs text-gray-500 mt-1">
-                                                        {(version.data.elements?.length || 0) + (version.data.snippets?.length || 0) + (version.data.symbols?.length || 0)} items
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="p-4 border-t border-panel-border">
-                                    <button
-                                        className="w-full px-4 py-2 bg-danger/20 text-danger rounded hover:bg-danger/30"
-                                        onClick={() => {
-                                            if (confirm('Clear all saved versions?')) {
-                                                setAutoSaveVersions([]);
-                                                localStorage.removeItem('markup_tool_versions');
-                                                setShowVersionHistory(false);
-                                            }
-                                        }}
-                                    >
-                                        Clear History
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                     {/* Template Save Dialog */}
                     {showTemplateDialog && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowTemplateDialog(false)}>
@@ -8756,6 +9303,67 @@
                                     >
                                         Save Template
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Version History Panel */}
+                    {showVersionHistory && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowVersionHistory(false)}>
+                            <div className="bg-panel-bg rounded-lg shadow-xl w-[500px] max-h-[70vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                                <div className="p-4 border-b border-panel-border flex justify-between items-center">
+                                    <h2 className="text-lg font-semibold">Auto-Save History</h2>
+                                    <button
+                                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+                                        onClick={() => setShowVersionHistory(false)}
+                                    >×</button>
+                                </div>
+                                <div className="p-4 overflow-y-auto max-h-[calc(70vh-60px)]">
+                                    {autoSaveVersions.length === 0 ? (
+                                        <div className="text-gray-500 text-sm text-center py-8">
+                                            No auto-save versions yet.<br/>
+                                            Versions are saved every 2 minutes.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {autoSaveVersions.map((version, index) => (
+                                                <div
+                                                    key={version.timestamp}
+                                                    className="p-3 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors"
+                                                    onClick={() => restoreFromVersion(version)}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <div className="text-sm font-medium">
+                                                                {index === 0 ? 'Latest' : `Version ${autoSaveVersions.length - index}`}
+                                                            </div>
+                                                            <div className="text-xs text-gray-400">{version.date}</div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-xs text-gray-500">{version.pdfName}</div>
+                                                            <div className="text-xs text-gray-500">
+                                                                {(version.data.elements?.length || 0) + (version.data.symbols?.length || 0) + (version.data.snippets?.length || 0)} items
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="mt-4 pt-4 border-t border-panel-border">
+                                        <button
+                                            className="w-full px-3 py-2 text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded"
+                                            onClick={() => {
+                                                if (confirm('Clear all auto-save history?')) {
+                                                    setAutoSaveVersions([]);
+                                                    localStorage.removeItem('markupToolAutoSaveVersions');
+                                                }
+                                            }}
+                                        >
+                                            Clear History
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

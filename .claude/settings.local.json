@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx eslint:*)",
-      "Bash(start index.html)"
+      "Bash(start index.html)",
+      "Bash(cmd /c \"start C:\\\\Users\\\\Kevin\\\\markup_tool\\\\index.html\")"
     ]
   }
 }
