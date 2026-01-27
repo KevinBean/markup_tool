@@ -383,7 +383,9 @@
             SYMBOL: 'symbol',
             COMMENT: 'comment',
             POLYLINE: 'polyline',
-            FREEHAND: 'freehand'
+            FREEHAND: 'freehand',
+            CALLOUT: 'callout',
+            DIMENSION: 'dimension'
         };
         
         const LAYERS = {
@@ -842,11 +844,111 @@
         // ============================================
         
         const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
+
         const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-        
+
         const distance = (p1, p2) => Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-        
+
+        // Snap coordinate to grid
+        const snapToGrid = (value, gridSize) => Math.round(value / gridSize) * gridSize;
+
+        // Calculate alignment guides for an element being dragged
+        const GUIDE_THRESHOLD = 8; // Pixels within which to snap
+        const calculateAlignmentGuides = (draggedBounds, allElements, excludeId) => {
+            const guides = [];
+            const snapAdjustments = { x: 0, y: 0 };
+
+            // Get edges and center of dragged element
+            const draggedEdges = {
+                left: draggedBounds.x,
+                right: draggedBounds.x + (draggedBounds.width || 0),
+                top: draggedBounds.y,
+                bottom: draggedBounds.y + (draggedBounds.height || 0),
+                centerX: draggedBounds.x + (draggedBounds.width || 0) / 2,
+                centerY: draggedBounds.y + (draggedBounds.height || 0) / 2
+            };
+
+            let closestX = { dist: GUIDE_THRESHOLD, value: null, type: null };
+            let closestY = { dist: GUIDE_THRESHOLD, value: null, type: null };
+
+            allElements.forEach(el => {
+                if (el.id === excludeId || el.visible === false) return;
+
+                // Get element bounds
+                let elBounds;
+                if (el.x1 !== undefined) {
+                    // Line/Arrow type
+                    elBounds = {
+                        left: Math.min(el.x1, el.x2),
+                        right: Math.max(el.x1, el.x2),
+                        top: Math.min(el.y1, el.y2),
+                        bottom: Math.max(el.y1, el.y2)
+                    };
+                } else if (el.x !== undefined) {
+                    elBounds = {
+                        left: el.x,
+                        right: el.x + (el.width || 0),
+                        top: el.y,
+                        bottom: el.y + (el.height || 0)
+                    };
+                } else return;
+
+                elBounds.centerX = (elBounds.left + elBounds.right) / 2;
+                elBounds.centerY = (elBounds.top + elBounds.bottom) / 2;
+
+                // Check horizontal alignments (vertical guide lines)
+                const xChecks = [
+                    { dragEdge: 'left', elEdge: 'left' },
+                    { dragEdge: 'left', elEdge: 'right' },
+                    { dragEdge: 'right', elEdge: 'left' },
+                    { dragEdge: 'right', elEdge: 'right' },
+                    { dragEdge: 'centerX', elEdge: 'centerX' }
+                ];
+
+                xChecks.forEach(({ dragEdge, elEdge }) => {
+                    const dist = Math.abs(draggedEdges[dragEdge] - elBounds[elEdge]);
+                    if (dist < closestX.dist) {
+                        closestX = { dist, value: elBounds[elEdge], type: `${dragEdge}-${elEdge}` };
+                    }
+                });
+
+                // Check vertical alignments (horizontal guide lines)
+                const yChecks = [
+                    { dragEdge: 'top', elEdge: 'top' },
+                    { dragEdge: 'top', elEdge: 'bottom' },
+                    { dragEdge: 'bottom', elEdge: 'top' },
+                    { dragEdge: 'bottom', elEdge: 'bottom' },
+                    { dragEdge: 'centerY', elEdge: 'centerY' }
+                ];
+
+                yChecks.forEach(({ dragEdge, elEdge }) => {
+                    const dist = Math.abs(draggedEdges[dragEdge] - elBounds[elEdge]);
+                    if (dist < closestY.dist) {
+                        closestY = { dist, value: elBounds[elEdge], type: `${dragEdge}-${elEdge}` };
+                    }
+                });
+            });
+
+            // Calculate snap adjustments
+            if (closestX.value !== null) {
+                const dragEdge = closestX.type.split('-')[0];
+                if (dragEdge === 'left') snapAdjustments.x = closestX.value - draggedEdges.left;
+                else if (dragEdge === 'right') snapAdjustments.x = closestX.value - draggedEdges.right;
+                else if (dragEdge === 'centerX') snapAdjustments.x = closestX.value - draggedEdges.centerX;
+                guides.push({ type: 'vertical', x: closestX.value });
+            }
+
+            if (closestY.value !== null) {
+                const dragEdge = closestY.type.split('-')[0];
+                if (dragEdge === 'top') snapAdjustments.y = closestY.value - draggedEdges.top;
+                else if (dragEdge === 'bottom') snapAdjustments.y = closestY.value - draggedEdges.bottom;
+                else if (dragEdge === 'centerY') snapAdjustments.y = closestY.value - draggedEdges.centerY;
+                guides.push({ type: 'horizontal', y: closestY.value });
+            }
+
+            return { guides, snapAdjustments };
+        };
+
         const debounce = (func, delay) => {
             let timeoutId;
             return (...args) => {
@@ -1068,6 +1170,36 @@
                     <rect x="14" y="3" width="7" height="7"/>
                     <rect x="14" y="14" width="7" height="7"/>
                     <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+            ),
+            Magnet: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 15V9a6 6 0 0 1 12 0v6"/>
+                    <path d="M6 9H2v6h4"/>
+                    <path d="M18 9h4v6h-4"/>
+                    <rect x="2" y="9" width="4" height="2" fill="currentColor"/>
+                    <rect x="18" y="9" width="4" height="2" fill="currentColor"/>
+                </svg>
+            ),
+            AlignGuide: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="2" x2="12" y2="22"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                    <rect x="8" y="8" width="8" height="8" fill="none"/>
+                </svg>
+            ),
+            Callout: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                </svg>
+            ),
+            Ruler: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
+                    <line x1="15" y1="5" x2="19" y2="9"/>
+                    <line x1="12" y1="8" x2="13" y2="9"/>
+                    <line x1="9" y1="11" x2="10" y2="12"/>
+                    <line x1="6" y1="14" x2="7" y2="15"/>
                 </svg>
             ),
             Layers: () => (
@@ -3355,6 +3487,9 @@
             const [newCommentText, setNewCommentText] = useState('');
             const [replyText, setReplyText] = useState('');
 
+            // Element Groups State
+            const [groups, setGroups] = useState([]); // [{id, name, members: [{id, type}], visible, locked}]
+
             // Polyline/Freehand Drawing State
             const [polylinePoints, setPolylinePoints] = useState([]);
             const [freehandPath, setFreehandPath] = useState([]);
@@ -3409,10 +3544,15 @@
 
             // UI State
             const [showGrid, setShowGrid] = useState(true);
+            const [snapEnabled, setSnapEnabled] = useState(false);
+            const [snapGridSize, setSnapGridSize] = useState(20); // Default same as GRID_SIZE
+            const [smartGuidesEnabled, setSmartGuidesEnabled] = useState(true);
+            const [alignmentGuides, setAlignmentGuides] = useState([]); // Active alignment guides to render
             const [styles, setStyles] = useState({ ...DEFAULT_STYLES });
             const [leftPanelTab, setLeftPanelTab] = useState('tools'); // 'tools' | 'layers' | 'library' | 'symbols' | 'data'
             const [showCalibrationDialog, setShowCalibrationDialog] = useState(false);
             const [showExportMenu, setShowExportMenu] = useState(false);
+            const [showShortcutsPanel, setShowShortcutsPanel] = useState(false);
             const [theme, setTheme] = useState(() => {
                 const saved = localStorage.getItem('markupToolTheme');
                 return saved || 'dark';
@@ -3869,6 +4009,10 @@
                                         const textWidth = el.width || 100;
                                         const textHeight = el.height || 20;
                                         return pointInRect(coords, { x: el.x, y: el.y, width: textWidth, height: textHeight });
+                                    case 'callout':
+                                        return pointInRect(coords, { x: el.x, y: el.y, width: el.width, height: el.height });
+                                    case 'dimension':
+                                        return pointToLineDistance(coords, el.x1, el.y1, el.x2, el.y2) <= 15;
                                     case 'polyline':
                                     case 'freehand':
                                         if (!el.points || el.points.length < 2) return false;
@@ -3986,6 +4130,34 @@
                             setFreehandPath([coords]);
                             break;
 
+                        case OPERATIONS.CALLOUT:
+                            // Callout box: create a speech bubble annotation
+                            const newCallout = {
+                                id: generateId(),
+                                type: 'callout',
+                                name: `Callout ${elements.filter(e => e.type === 'callout').length + 1}`,
+                                x: coords.x,
+                                y: coords.y,
+                                width: 150,
+                                height: 60,
+                                content: 'Double-click to edit',
+                                fontSize: styles.fontSize || 12,
+                                color: styles.stroke || '#000000',
+                                backgroundColor: styles.fill === 'none' ? '#fffde7' : styles.fill,
+                                borderColor: styles.stroke || '#fbc02d',
+                                pointerDirection: 'bottom', // top, bottom, left, right
+                                pointerPosition: 50, // percent along edge
+                                pointerLength: 20,
+                                rotation: 0,
+                                visible: true,
+                                locked: false
+                            };
+                            setElements(prev => [...prev, newCallout]);
+                            setSelectedId(newCallout.id);
+                            setSelectedType('element');
+                            history.push({ snippets, masks, elements: [...elements, newCallout], infoPoints, symbols, measurements, cableAnnotations });
+                            break;
+
                         case OPERATIONS.CALIBRATE:
                             // Calibration: click two points, then enter known distance
                             if (calibrationStep === 0) {
@@ -4001,6 +4173,13 @@
 
                         case OPERATIONS.MEASURE:
                             // Measurement: draw lines between two points
+                            setIsDrawing(true);
+                            setDrawStart(coords);
+                            setDrawEnd(coords);
+                            break;
+
+                        case OPERATIONS.DIMENSION:
+                            // Dimension line: draw with extension lines and measurement text
                             setIsDrawing(true);
                             setDrawStart(coords);
                             setDrawEnd(coords);
@@ -4085,26 +4264,60 @@
                 }
 
                 if (isDragging && selectedId) {
-                    const updatePosition = (items, setItems) => {
+                    // Apply snap to grid if enabled
+                    const applySnap = (val) => snapEnabled ? snapToGrid(val, snapGridSize) : val;
+
+                    // Collect all elements for smart guide calculation
+                    const allItems = smartGuidesEnabled ? [
+                        ...snippets.map(s => ({ ...s, _type: 'snippet' })),
+                        ...masks.map(m => ({ ...m, _type: 'mask' })),
+                        ...symbols.map(s => ({ ...s, _type: 'symbol' })),
+                        ...elements.filter(el => el.type !== 'line' && el.type !== 'arrow' && el.type !== 'polyline' && el.type !== 'freehand').map(el => ({ ...el, _type: 'element' })),
+                        ...imageOverlays.map(io => ({ ...io, _type: 'imageOverlay' }))
+                    ] : [];
+
+                    const updatePositionWithGuides = (items, setItems, itemType) => {
+                        const currentItem = items.find(item => item.id === selectedId);
+                        if (!currentItem) return;
+
+                        let newX = applySnap(coords.x - dragStart.x);
+                        let newY = applySnap(coords.y - dragStart.y);
+
+                        // Calculate smart guides if enabled
+                        if (smartGuidesEnabled && currentItem.width !== undefined) {
+                            const draggedBounds = {
+                                x: coords.x - dragStart.x,
+                                y: coords.y - dragStart.y,
+                                width: currentItem.width,
+                                height: currentItem.height
+                            };
+                            const { guides, snapAdjustments } = calculateAlignmentGuides(draggedBounds, allItems, selectedId);
+                            setAlignmentGuides(guides);
+                            newX += snapAdjustments.x;
+                            newY += snapAdjustments.y;
+                        }
+
                         setItems(items.map(item =>
-                            item.id === selectedId
-                                ? { ...item, x: coords.x - dragStart.x, y: coords.y - dragStart.y }
-                                : item
+                            item.id === selectedId ? { ...item, x: newX, y: newY } : item
                         ));
                     };
 
-                    if (selectedType === 'snippet') updatePosition(snippets, setSnippets);
-                    if (selectedType === 'mask') updatePosition(masks, setMasks);
-                    if (selectedType === 'infoPoint') updatePosition(infoPoints, setInfoPoints);
-                    if (selectedType === 'symbol') updatePosition(symbols, setSymbols);
-                    if (selectedType === 'imageOverlay') updatePosition(imageOverlays, setImageOverlays);
-                    if (selectedType === 'measurement') {
+                    if (selectedType === 'snippet') updatePositionWithGuides(snippets, setSnippets, 'snippet');
+                    else if (selectedType === 'mask') updatePositionWithGuides(masks, setMasks, 'mask');
+                    else if (selectedType === 'infoPoint') updatePositionWithGuides(infoPoints, setInfoPoints, 'infoPoint');
+                    else if (selectedType === 'symbol') updatePositionWithGuides(symbols, setSymbols, 'symbol');
+                    else if (selectedType === 'imageOverlay') updatePositionWithGuides(imageOverlays, setImageOverlays, 'imageOverlay');
+                    else if (selectedType === 'measurement') {
                         setMeasurements(measurements.map(m => {
                             if (m.id !== selectedId) return m;
                             const midX = (m.x1 + m.x2) / 2;
                             const midY = (m.y1 + m.y2) / 2;
-                            const newMidX = coords.x - dragStart.x;
-                            const newMidY = coords.y - dragStart.y;
+                            let newMidX = coords.x - dragStart.x;
+                            let newMidY = coords.y - dragStart.y;
+                            if (snapEnabled) {
+                                newMidX = snapToGrid(newMidX, snapGridSize);
+                                newMidY = snapToGrid(newMidY, snapGridSize);
+                            }
                             const dx = newMidX - midX;
                             const dy = newMidY - midY;
                             return {
@@ -4115,29 +4328,60 @@
                                 y2: m.y2 + dy
                             };
                         }));
-                    }
-                    if (selectedType === 'element') {
-                        setElements(elements.map(el => {
-                            if (el.id !== selectedId) return el;
-                            // Special handling for lines and arrows - move both endpoints
-                            if (el.type === 'line' || el.type === 'arrow') {
-                                const midX = (el.x1 + el.x2) / 2;
-                                const midY = (el.y1 + el.y2) / 2;
-                                const newMidX = coords.x - dragStart.x;
-                                const newMidY = coords.y - dragStart.y;
+                        setAlignmentGuides([]);
+                    } else if (selectedType === 'element') {
+                        const currentEl = elements.find(el => el.id === selectedId);
+                        if (currentEl) {
+                            if (currentEl.type === 'line' || currentEl.type === 'arrow') {
+                                // Lines/arrows don't use smart guides
+                                const midX = (currentEl.x1 + currentEl.x2) / 2;
+                                const midY = (currentEl.y1 + currentEl.y2) / 2;
+                                let newMidX = coords.x - dragStart.x;
+                                let newMidY = coords.y - dragStart.y;
+                                if (snapEnabled) {
+                                    newMidX = snapToGrid(newMidX, snapGridSize);
+                                    newMidY = snapToGrid(newMidY, snapGridSize);
+                                }
                                 const dx = newMidX - midX;
                                 const dy = newMidY - midY;
-                                return {
-                                    ...el,
-                                    x1: el.x1 + dx,
-                                    y1: el.y1 + dy,
-                                    x2: el.x2 + dx,
-                                    y2: el.y2 + dy
-                                };
+                                setElements(elements.map(el =>
+                                    el.id !== selectedId ? el : {
+                                        ...el,
+                                        x1: el.x1 + dx,
+                                        y1: el.y1 + dy,
+                                        x2: el.x2 + dx,
+                                        y2: el.y2 + dy
+                                    }
+                                ));
+                                setAlignmentGuides([]);
+                            } else if (currentEl.type === 'rectangle' || currentEl.type === 'circle') {
+                                let newX = applySnap(coords.x - dragStart.x);
+                                let newY = applySnap(coords.y - dragStart.y);
+
+                                if (smartGuidesEnabled) {
+                                    const draggedBounds = {
+                                        x: coords.x - dragStart.x,
+                                        y: coords.y - dragStart.y,
+                                        width: currentEl.width,
+                                        height: currentEl.height
+                                    };
+                                    const { guides, snapAdjustments } = calculateAlignmentGuides(draggedBounds, allItems, selectedId);
+                                    setAlignmentGuides(guides);
+                                    newX += snapAdjustments.x;
+                                    newY += snapAdjustments.y;
+                                }
+
+                                setElements(elements.map(el =>
+                                    el.id !== selectedId ? el : { ...el, x: newX, y: newY }
+                                ));
+                            } else {
+                                // Polyline, freehand, text - simple position update
+                                setElements(elements.map(el =>
+                                    el.id !== selectedId ? el : { ...el, x: applySnap(coords.x - dragStart.x), y: applySnap(coords.y - dragStart.y) }
+                                ));
+                                setAlignmentGuides([]);
                             }
-                            // Standard position update for rectangles and circles
-                            return { ...el, x: coords.x - dragStart.x, y: coords.y - dragStart.y };
-                        }));
+                        }
                     }
                     return;
                 }
@@ -4155,7 +4399,7 @@
                 if (selectionBox) {
                     setSelectionBox(prev => ({ ...prev, x2: coords.x, y2: coords.y }));
                 }
-            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints, elements, symbols, measurements, selectionBox]);
+            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints, elements, symbols, measurements, selectionBox, snapEnabled, snapGridSize, smartGuidesEnabled, imageOverlays]);
             
             const handleMouseUp = useCallback((e) => {
                 const coords = screenToCanvas(e.clientX, e.clientY);
@@ -4167,6 +4411,7 @@
                 
                 if (isDragging) {
                     setIsDragging(false);
+                    setAlignmentGuides([]); // Clear alignment guides
                     // Save to history
                     history.push({ snippets: [...snippets], masks: [...masks], elements: [...elements], infoPoints: [...infoPoints], symbols: [...symbols], measurements: [...measurements], cableAnnotations: [...cableAnnotations] });
                     return;
@@ -4455,6 +4700,36 @@
                                 setSelectedType('measurement');
                                 history.push({ snippets, masks, elements, infoPoints, symbols, measurements: [...measurements, newMeasurement], cableAnnotations });
                                 break;
+
+                            case OPERATIONS.DIMENSION:
+                                // Create dimension line element
+                                const dimPixelDist = distance(drawStart, coords);
+                                const dimRealDistance = scaleCalibration.isCalibrated
+                                    ? dimPixelDist / scaleCalibration.pixelsPerMeter
+                                    : null;
+                                const newDimension = {
+                                    id: generateId(),
+                                    type: 'dimension',
+                                    name: `Dimension ${elements.filter(e => e.type === 'dimension').length + 1}`,
+                                    x1: drawStart.x,
+                                    y1: drawStart.y,
+                                    x2: coords.x,
+                                    y2: coords.y,
+                                    pixelDistance: dimPixelDist,
+                                    realDistance: dimRealDistance,
+                                    unit: scaleCalibration.unit || 'px',
+                                    extensionLength: 15,
+                                    textOffset: 10,
+                                    fontSize: 12,
+                                    color: styles.stroke || '#000000',
+                                    visible: true,
+                                    locked: false
+                                };
+                                setElements(prev => [...prev, newDimension]);
+                                setSelectedId(newDimension.id);
+                                setSelectedType('element');
+                                history.push({ snippets, masks, elements: [...elements, newDimension], infoPoints, symbols, measurements, cableAnnotations });
+                                break;
                         }
                     }
                     
@@ -4515,11 +4790,17 @@
                                 break;
                             case 'i': setCurrentTool(OPERATIONS.INFO_POINT); break;
                             case 't': setCurrentTool(OPERATIONS.TEXT); break;
+                            case 'b': setCurrentTool(OPERATIONS.CALLOUT); break;
+                            case 'j': setCurrentTool(OPERATIONS.DIMENSION); break;
                             case 'd': setCurrentTool(OPERATIONS.MEASURE); break;
                             case 'p': setCurrentTool(OPERATIONS.SYMBOL); break;
                             case 'k': setCurrentTool(OPERATIONS.COMMENT); break;
                             case 'y': setCurrentTool(OPERATIONS.POLYLINE); break;
                             case 'f': setCurrentTool(OPERATIONS.FREEHAND); break;
+                            case 'g': setShowGrid(prev => !prev); break;
+                            case ';': setSnapEnabled(prev => !prev); break;
+                            case "'": setSmartGuidesEnabled(prev => !prev); break;
+                            case '?': setShowShortcutsPanel(prev => !prev); break;
                             case 'enter':
                                 // Finish polyline if drawing
                                 if (currentTool === OPERATIONS.POLYLINE && polylinePoints.length >= 2) {
@@ -4697,6 +4978,16 @@
                             case 's':
                                 e.preventDefault();
                                 handleSaveProject();
+                                break;
+                            case 'g':
+                                e.preventDefault();
+                                if (e.shiftKey) {
+                                    // Ctrl+Shift+G: Ungroup
+                                    handleUngroupElements();
+                                } else {
+                                    // Ctrl+G: Group selected elements
+                                    handleGroupElements();
+                                }
                                 break;
                             case 'o':
                                 e.preventDefault();
@@ -5433,6 +5724,54 @@
             };
 
             // ============================================
+            // GROUPING FUNCTIONS
+            // ============================================
+
+            const handleGroupElements = () => {
+                if (selectedIds.length < 2) return;
+
+                const newGroup = {
+                    id: generateId(),
+                    name: `Group ${groups.length + 1}`,
+                    members: [...selectedIds],
+                    visible: true,
+                    locked: false
+                };
+
+                setGroups(prev => [...prev, newGroup]);
+                // Select the group instead of individual items
+                setSelectedIds([]);
+                setSelectedId(newGroup.id);
+                setSelectedType('group');
+                history.push({ snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations });
+            };
+
+            const handleUngroupElements = () => {
+                // Find if current selection is a group
+                const group = groups.find(g => g.id === selectedId);
+                if (!group) return;
+
+                // Remove the group and select its members
+                setGroups(prev => prev.filter(g => g.id !== group.id));
+                setSelectedIds(group.members);
+                setSelectedId(group.members[0]?.id || null);
+                setSelectedType(group.members[0]?.type || null);
+                history.push({ snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations });
+            };
+
+            // Get all members of a group recursively
+            const getGroupMembers = (groupId) => {
+                const group = groups.find(g => g.id === groupId);
+                if (!group) return [];
+                return group.members;
+            };
+
+            // Check if an item belongs to a group
+            const getItemGroup = (itemId, itemType) => {
+                return groups.find(g => g.members.some(m => m.id === itemId && m.type === itemType));
+            };
+
+            // ============================================
             // COMMENT FUNCTIONS
             // ============================================
 
@@ -5909,6 +6248,20 @@
                                                 onClick={() => setCurrentTool(OPERATIONS.TEXT)}
                                             />
                                             <ToolButton
+                                                icon={Icons.Callout}
+                                                label="Callout"
+                                                shortcut="B"
+                                                active={currentTool === OPERATIONS.CALLOUT}
+                                                onClick={() => setCurrentTool(OPERATIONS.CALLOUT)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Ruler}
+                                                label="Dimension"
+                                                shortcut="J"
+                                                active={currentTool === OPERATIONS.DIMENSION}
+                                                onClick={() => setCurrentTool(OPERATIONS.DIMENSION)}
+                                            />
+                                            <ToolButton
                                                 icon={Icons.List}
                                                 label="Summary"
                                                 onClick={() => setShowInfoSummary(true)}
@@ -5990,7 +6343,34 @@
                                                 active={showGrid}
                                                 onClick={() => setShowGrid(prev => !prev)}
                                             />
+                                            <ToolButton
+                                                icon={Icons.Magnet}
+                                                label="Snap to Grid"
+                                                active={snapEnabled}
+                                                onClick={() => setSnapEnabled(prev => !prev)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.AlignGuide}
+                                                label="Smart Guides"
+                                                active={smartGuidesEnabled}
+                                                onClick={() => setSmartGuidesEnabled(prev => !prev)}
+                                            />
                                         </div>
+                                        {/* Snap Grid Size */}
+                                        {snapEnabled && (
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-xs text-gray-400">Grid:</span>
+                                                {[10, 20, 50].map(size => (
+                                                    <button
+                                                        key={size}
+                                                        className={`px-2 py-0.5 text-xs rounded ${snapGridSize === size ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                                                        onClick={() => setSnapGridSize(size)}
+                                                    >
+                                                        {size}px
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                         {/* Quick Zoom Presets */}
                                         <div className="flex gap-1 mt-2">
                                             {[50, 100, 150, 200].map(pct => (
@@ -6924,6 +7304,166 @@
                                                                 )}
                                                             </g>
                                                         );
+                                                    case 'callout':
+                                                        const calloutRotation = element.rotation || 0;
+                                                        const calloutCenterX = element.x + element.width / 2;
+                                                        const calloutCenterY = element.y + element.height / 2;
+                                                        const pDir = element.pointerDirection || 'bottom';
+                                                        const pPos = element.pointerPosition || 50;
+                                                        const pLen = element.pointerLength || 20;
+
+                                                        // Calculate pointer path based on direction
+                                                        let pointerPath = '';
+                                                        const px = element.x + (element.width * pPos / 100);
+                                                        const py = element.y + (element.height * pPos / 100);
+                                                        if (pDir === 'bottom') {
+                                                            pointerPath = `M${px - 10},${element.y + element.height} L${px},${element.y + element.height + pLen} L${px + 10},${element.y + element.height}`;
+                                                        } else if (pDir === 'top') {
+                                                            pointerPath = `M${px - 10},${element.y} L${px},${element.y - pLen} L${px + 10},${element.y}`;
+                                                        } else if (pDir === 'left') {
+                                                            const leftPy = element.y + (element.height * pPos / 100);
+                                                            pointerPath = `M${element.x},${leftPy - 10} L${element.x - pLen},${leftPy} L${element.x},${leftPy + 10}`;
+                                                        } else if (pDir === 'right') {
+                                                            const rightPy = element.y + (element.height * pPos / 100);
+                                                            pointerPath = `M${element.x + element.width},${rightPy - 10} L${element.x + element.width + pLen},${rightPy} L${element.x + element.width},${rightPy + 10}`;
+                                                        }
+
+                                                        return (
+                                                            <g key={element.id} transform={calloutRotation ? `rotate(${calloutRotation} ${calloutCenterX} ${calloutCenterY})` : undefined}>
+                                                                {/* Callout box */}
+                                                                <rect
+                                                                    x={element.x}
+                                                                    y={element.y}
+                                                                    width={element.width}
+                                                                    height={element.height}
+                                                                    fill={element.backgroundColor || '#fffde7'}
+                                                                    stroke={element.borderColor || '#fbc02d'}
+                                                                    strokeWidth={2}
+                                                                    rx={6}
+                                                                />
+                                                                {/* Pointer */}
+                                                                <path
+                                                                    d={pointerPath}
+                                                                    fill={element.backgroundColor || '#fffde7'}
+                                                                    stroke={element.borderColor || '#fbc02d'}
+                                                                    strokeWidth={2}
+                                                                    strokeLinejoin="round"
+                                                                />
+                                                                {/* Text content */}
+                                                                <text
+                                                                    x={element.x + element.width / 2}
+                                                                    y={element.y + element.height / 2 + (element.fontSize || 12) / 3}
+                                                                    fill={element.color || '#000000'}
+                                                                    fontSize={element.fontSize || 12}
+                                                                    fontFamily="Arial"
+                                                                    textAnchor="middle"
+                                                                    style={{ userSelect: 'none' }}
+                                                                >
+                                                                    {element.content || ''}
+                                                                </text>
+                                                                {/* Selection border */}
+                                                                {isSelected && (
+                                                                    <rect
+                                                                        x={element.x - 2}
+                                                                        y={element.y - 2}
+                                                                        width={element.width + 4}
+                                                                        height={element.height + 4}
+                                                                        fill="none"
+                                                                        stroke="#0ea5e9"
+                                                                        strokeWidth={2 / zoom}
+                                                                        strokeDasharray={`${4 / zoom}`}
+                                                                    />
+                                                                )}
+                                                            </g>
+                                                        );
+                                                    case 'dimension':
+                                                        // Calculate dimension line geometry
+                                                        const dimAngle = Math.atan2(element.y2 - element.y1, element.x2 - element.x1);
+                                                        const perpAngle = dimAngle + Math.PI / 2;
+                                                        const extLen = element.extensionLength || 15;
+                                                        const textOff = element.textOffset || 10;
+
+                                                        // Extension lines (perpendicular to main line)
+                                                        const ext1X1 = element.x1;
+                                                        const ext1Y1 = element.y1;
+                                                        const ext1X2 = element.x1 + Math.cos(perpAngle) * extLen;
+                                                        const ext1Y2 = element.y1 + Math.sin(perpAngle) * extLen;
+                                                        const ext2X1 = element.x2;
+                                                        const ext2Y1 = element.y2;
+                                                        const ext2X2 = element.x2 + Math.cos(perpAngle) * extLen;
+                                                        const ext2Y2 = element.y2 + Math.sin(perpAngle) * extLen;
+
+                                                        // Dimension line (offset from main line)
+                                                        const dimLineOffset = extLen - 3;
+                                                        const dimX1 = element.x1 + Math.cos(perpAngle) * dimLineOffset;
+                                                        const dimY1 = element.y1 + Math.sin(perpAngle) * dimLineOffset;
+                                                        const dimX2 = element.x2 + Math.cos(perpAngle) * dimLineOffset;
+                                                        const dimY2 = element.y2 + Math.sin(perpAngle) * dimLineOffset;
+
+                                                        // Text position (center of dimension line)
+                                                        const textX = (dimX1 + dimX2) / 2;
+                                                        const textY = (dimY1 + dimY2) / 2;
+
+                                                        // Display value
+                                                        const displayValue = element.realDistance
+                                                            ? `${element.realDistance.toFixed(2)} ${element.unit}`
+                                                            : `${element.pixelDistance?.toFixed(0) || 0} px`;
+
+                                                        // Text rotation for readability
+                                                        let dimTextRotation = (dimAngle * 180 / Math.PI);
+                                                        if (dimTextRotation > 90 || dimTextRotation < -90) dimTextRotation += 180;
+
+                                                        return (
+                                                            <g key={element.id} style={{ color: element.color }}>
+                                                                {/* Extension lines */}
+                                                                <line
+                                                                    x1={ext1X1} y1={ext1Y1} x2={ext1X2} y2={ext1Y2}
+                                                                    stroke={element.color || '#000'}
+                                                                    strokeWidth={1}
+                                                                />
+                                                                <line
+                                                                    x1={ext2X1} y1={ext2Y1} x2={ext2X2} y2={ext2Y2}
+                                                                    stroke={element.color || '#000'}
+                                                                    strokeWidth={1}
+                                                                />
+                                                                {/* Dimension line with arrowheads */}
+                                                                <line
+                                                                    x1={dimX1} y1={dimY1} x2={dimX2} y2={dimY2}
+                                                                    stroke={element.color || '#000'}
+                                                                    strokeWidth={1}
+                                                                    markerStart="url(#arrowhead-start)"
+                                                                    markerEnd="url(#arrowhead-end)"
+                                                                />
+                                                                {/* Text background */}
+                                                                <rect
+                                                                    x={textX - 25}
+                                                                    y={textY - 8}
+                                                                    width={50}
+                                                                    height={16}
+                                                                    fill="white"
+                                                                    transform={`rotate(${dimTextRotation} ${textX} ${textY})`}
+                                                                />
+                                                                {/* Dimension text */}
+                                                                <text
+                                                                    x={textX}
+                                                                    y={textY + 4}
+                                                                    fill={element.color || '#000'}
+                                                                    fontSize={element.fontSize || 12}
+                                                                    textAnchor="middle"
+                                                                    transform={`rotate(${dimTextRotation} ${textX} ${textY})`}
+                                                                    style={{ userSelect: 'none' }}
+                                                                >
+                                                                    {displayValue}
+                                                                </text>
+                                                                {/* Selection indicators */}
+                                                                {isSelected && (
+                                                                    <>
+                                                                        <circle cx={element.x1} cy={element.y1} r={4 / zoom} fill="#0ea5e9" />
+                                                                        <circle cx={element.x2} cy={element.y2} r={4 / zoom} fill="#0ea5e9" />
+                                                                    </>
+                                                                )}
+                                                            </g>
+                                                        );
                                                     default:
                                                         return null;
                                                 }
@@ -7359,6 +7899,35 @@
                                                 />
                                             )}
 
+                                            {/* Alignment Guides */}
+                                            {alignmentGuides.map((guide, idx) => (
+                                                guide.type === 'vertical' ? (
+                                                    <line
+                                                        key={`guide-v-${idx}`}
+                                                        x1={guide.x}
+                                                        y1={0}
+                                                        x2={guide.x}
+                                                        y2={currentPageData?.height || 2000}
+                                                        stroke="#f43f5e"
+                                                        strokeWidth={1 / zoom}
+                                                        strokeDasharray={`${4 / zoom}`}
+                                                        pointerEvents="none"
+                                                    />
+                                                ) : (
+                                                    <line
+                                                        key={`guide-h-${idx}`}
+                                                        x1={0}
+                                                        y1={guide.y}
+                                                        x2={currentPageData?.width || 2000}
+                                                        y2={guide.y}
+                                                        stroke="#f43f5e"
+                                                        strokeWidth={1 / zoom}
+                                                        strokeDasharray={`${4 / zoom}`}
+                                                        pointerEvents="none"
+                                                    />
+                                                )
+                                            ))}
+
                                             {/* Selection Box */}
                                             {selectionBox && (
                                                 <rect
@@ -7679,6 +8248,79 @@
                                     >
                                         Save Template
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Keyboard Shortcuts Panel */}
+                    {showShortcutsPanel && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowShortcutsPanel(false)}>
+                            <div className="bg-panel-bg rounded-lg shadow-xl w-[600px] max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                                <div className="p-4 border-b border-panel-border flex justify-between items-center">
+                                    <h2 className="text-lg font-semibold">Keyboard Shortcuts</h2>
+                                    <button
+                                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+                                        onClick={() => setShowShortcutsPanel(false)}
+                                    >×</button>
+                                </div>
+                                <div className="p-4 overflow-y-auto max-h-[calc(80vh-60px)]">
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Tools */}
+                                        <div>
+                                            <h3 className="text-sm font-medium text-accent mb-2">Tools</h3>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between"><span className="text-gray-400">Select</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">V</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Snippet</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">S</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Mask</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">M</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Rectangle</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">R</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Circle</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">C</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Line</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">L</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Arrow</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">A</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Text</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">T</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Callout</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">B</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Dimension</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">J</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Info Point</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">I</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Measure</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">D</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Symbol</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">P</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Comment</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">K</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Polyline</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Y</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Freehand</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">F</kbd></div>
+                                            </div>
+                                        </div>
+                                        {/* View & Edit */}
+                                        <div>
+                                            <h3 className="text-sm font-medium text-accent mb-2">View & Edit</h3>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between"><span className="text-gray-400">Toggle Grid</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">G</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Snap to Grid</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">;</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Smart Guides</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">'</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Cancel/Deselect</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Esc</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Delete</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Del</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Rotate 90°</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">R</kbd><span className="text-xs text-gray-500">(when selected)</span></div>
+                                            </div>
+
+                                            <h3 className="text-sm font-medium text-accent mt-4 mb-2">File</h3>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between"><span className="text-gray-400">Save</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Ctrl+S</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Open</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Ctrl+O</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Undo</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Ctrl+Z</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Redo</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Ctrl+Shift+Z</kbd></div>
+                                            </div>
+
+                                            <h3 className="text-sm font-medium text-accent mt-4 mb-2">Groups</h3>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between"><span className="text-gray-400">Group</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Ctrl+G</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Ungroup</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Ctrl+Shift+G</kbd></div>
+                                            </div>
+
+                                            <h3 className="text-sm font-medium text-accent mt-4 mb-2">Navigation</h3>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between"><span className="text-gray-400">Move element</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Arrow keys</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">This panel</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">?</kbd></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
