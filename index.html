@@ -25,9 +25,13 @@
             theme: {
                 extend: {
                     colors: {
-                        'editor-bg': '#1a1a1a',
-                        'panel-bg': '#252525',
-                        'panel-border': '#3a3a3a',
+                        'editor-bg': 'var(--bg-primary)',
+                        'panel-bg': 'var(--bg-secondary)',
+                        'panel-border': 'var(--border-color)',
+                        'panel-hover': 'var(--bg-hover)',
+                        'text-primary': 'var(--text-primary)',
+                        'text-secondary': 'var(--text-secondary)',
+                        'text-muted': 'var(--text-muted)',
                         'accent': '#0ea5e9',
                         'accent-hover': '#38bdf8',
                         'success': '#22c55e',
@@ -41,17 +45,50 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
-        
+
+        /* Theme CSS Variables */
+        :root, .dark-theme {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #252525;
+            --bg-tertiary: #2f2f2f;
+            --bg-hover: #3f3f3f;
+            --border-color: #3a3a3a;
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --text-muted: #737373;
+            --canvas-grid: #2a2a2a;
+            --canvas-bg: #1e1e1e;
+            --scrollbar-track: #1a1a1a;
+            --scrollbar-thumb: #404040;
+            --scrollbar-thumb-hover: #505050;
+        }
+
+        .light-theme {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e5e5e5;
+            --bg-hover: #d4d4d4;
+            --border-color: #d4d4d4;
+            --text-primary: #171717;
+            --text-secondary: #525252;
+            --text-muted: #737373;
+            --canvas-grid: #d0d0d0;
+            --canvas-bg: #e8e8e8;
+            --scrollbar-track: #f0f0f0;
+            --scrollbar-thumb: #c0c0c0;
+            --scrollbar-thumb-hover: #a0a0a0;
+        }
+
         * {
             box-sizing: border-box;
         }
-        
+
         body {
             margin: 0;
             padding: 0;
             font-family: 'IBM Plex Sans', sans-serif;
-            background: #1a1a1a;
-            color: #e5e5e5;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             overflow: hidden;
         }
         
@@ -64,18 +101,18 @@
             width: 8px;
             height: 8px;
         }
-        
+
         ::-webkit-scrollbar-track {
-            background: #1a1a1a;
+            background: var(--scrollbar-track);
         }
-        
+
         ::-webkit-scrollbar-thumb {
-            background: #404040;
+            background: var(--scrollbar-thumb);
             border-radius: 4px;
         }
-        
+
         ::-webkit-scrollbar-thumb:hover {
-            background: #505050;
+            background: var(--scrollbar-thumb-hover);
         }
 
         /* Resize handle */
@@ -93,10 +130,10 @@
         .canvas-container {
             position: relative;
             overflow: hidden;
-            background: 
-                linear-gradient(90deg, #2a2a2a 1px, transparent 1px),
-                linear-gradient(#2a2a2a 1px, transparent 1px),
-                #1e1e1e;
+            background:
+                linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px),
+                linear-gradient(var(--canvas-grid) 1px, transparent 1px),
+                var(--canvas-bg);
             background-size: 20px 20px;
         }
         
@@ -145,8 +182,8 @@
             transform: translateY(-50%);
             margin-left: 8px;
             padding: 4px 8px;
-            background: #404040;
-            color: white;
+            background: var(--bg-hover);
+            color: var(--text-primary);
             font-size: 12px;
             border-radius: 4px;
             white-space: nowrap;
@@ -191,19 +228,19 @@
         
         /* Input styling */
         input[type="number"], input[type="text"] {
-            background: #1a1a1a;
-            border: 1px solid #3a3a3a;
-            color: #e5e5e5;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
         }
-        
+
         input[type="number"]:focus, input[type="text"]:focus {
             outline: none;
             border-color: #0ea5e9;
         }
-        
+
         input[type="color"] {
             width: 32px;
             height: 24px;
@@ -212,11 +249,11 @@
             cursor: pointer;
             background: transparent;
         }
-        
+
         select {
-            background: #1a1a1a;
-            border: 1px solid #3a3a3a;
-            color: #e5e5e5;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
@@ -226,11 +263,11 @@
         .page-nav-btn {
             transition: all 0.2s;
         }
-        
+
         .page-nav-btn:hover:not(:disabled) {
-            background: #404040;
+            background: var(--bg-hover);
         }
-        
+
         .page-nav-btn:disabled {
             opacity: 0.3;
             cursor: not-allowed;
@@ -246,18 +283,18 @@
         .data-table td {
             text-align: left;
             padding: 6px 8px;
-            border-bottom: 1px solid #3a3a3a;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .data-table th {
-            background: #252525;
+            background: var(--bg-secondary);
             position: sticky;
             top: 0;
             z-index: 1;
         }
 
         .data-table tr:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(128, 128, 128, 0.1);
         }
 
         .data-table input {
@@ -273,6 +310,49 @@
             outline: 1px solid #0ea5e9;
             background: rgba(14, 165, 233, 0.1);
             border-radius: 2px;
+        }
+
+        /* Light theme overrides for Tailwind utility classes */
+        .light-theme .text-white {
+            color: var(--text-primary) !important;
+        }
+
+        .light-theme .text-gray-300,
+        .light-theme .text-gray-400 {
+            color: var(--text-secondary) !important;
+        }
+
+        .light-theme .text-gray-500,
+        .light-theme .text-gray-600 {
+            color: var(--text-muted) !important;
+        }
+
+        .light-theme .bg-gray-700,
+        .light-theme .hover\:bg-gray-700:hover {
+            background-color: var(--bg-hover) !important;
+        }
+
+        .light-theme .bg-gray-800 {
+            background-color: var(--bg-tertiary) !important;
+        }
+
+        .light-theme .bg-\[\#1a1a1a\],
+        .light-theme .bg-\[\#252525\] {
+            background-color: var(--bg-secondary) !important;
+        }
+
+        .light-theme .border-gray-600,
+        .light-theme .border-gray-700 {
+            border-color: var(--border-color) !important;
+        }
+
+        .light-theme .shadow-lg {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        /* Light theme - make the header text more readable */
+        .light-theme header .text-white {
+            color: #171717 !important;
         }
     </style>
 </head>
@@ -300,7 +380,8 @@
             PAN: 'pan',
             CALIBRATE: 'calibrate',
             MEASURE: 'measure',
-            SYMBOL: 'symbol'
+            SYMBOL: 'symbol',
+            COMMENT: 'comment'
         };
         
         const LAYERS = {
@@ -347,6 +428,14 @@
             letter: { label: 'Letter', description: 'A, B, C...' },
             icon: { label: 'Icon', description: 'ⓘ info symbol' },
             none: { label: 'None', description: 'Empty circle' }
+        };
+
+        // Comment Status options
+        const COMMENT_STATUSES = {
+            pending: { label: 'Pending', color: '#f59e0b', icon: '⏳' },
+            approved: { label: 'Approved', color: '#22c55e', icon: '✓' },
+            revision: { label: 'Needs Revision', color: '#ef4444', icon: '⚠' },
+            resolved: { label: 'Resolved', color: '#64748b', icon: '✗' }
         };
 
         // ============================================
@@ -1137,6 +1226,42 @@
                     <line x1="9" y1="9" x2="15" y2="9"/>
                 </svg>
             ),
+            Sun: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+            ),
+            Moon: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            ),
+            Pages: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="14" height="18" rx="2"/>
+                    <rect x="7" y="6" width="14" height="18" rx="2"/>
+                </svg>
+            ),
+            Template: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <line x1="3" y1="9" x2="21" y2="9"/>
+                    <line x1="9" y1="21" x2="9" y2="9"/>
+                </svg>
+            ),
+            Comment: () => (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            ),
         };
         
         // ============================================
@@ -1356,6 +1481,7 @@
             const isInfoPoint = selection.type === 'info_point';
             const isLine = selection.type === 'line';
             const isArrow = selection.type === 'arrow';
+            const isText = selection.type === 'text';
             const isLineOrArrow = isLine || isArrow;
             const isSymbol = selection.type === 'symbol';
             const isMeasurement = selection.type === 'measurement';
@@ -1366,9 +1492,22 @@
                         {selection.type === 'info_point' ? 'Info Point' : selection.type} Properties
                     </div>
 
-                    {/* Name */}
+                    {/* Name and Lock */}
                     <div className="space-y-2">
-                        <div className="text-xs text-gray-500">Name</div>
+                        <div className="flex items-center justify-between">
+                            <div className="text-xs text-gray-500">Name</div>
+                            <label className="flex items-center gap-1 cursor-pointer" title={selection.locked ? "Unlock element" : "Lock element"}>
+                                <input
+                                    type="checkbox"
+                                    checked={selection.locked || false}
+                                    onChange={(e) => onUpdate({ locked: e.target.checked })}
+                                    className="hidden"
+                                />
+                                <span className={`p-1 rounded ${selection.locked ? 'text-yellow-500 bg-yellow-500/20' : 'text-gray-500 hover:text-gray-300'}`}>
+                                    {selection.locked ? <Icons.Lock /> : <Icons.Unlock />}
+                                </span>
+                            </label>
+                        </div>
                         <input
                             type="text"
                             value={selection.name || ''}
@@ -1479,6 +1618,78 @@
                                 />
                                 <span className="text-xs text-gray-300">Arrow at end</span>
                             </label>
+                        </div>
+                    )}
+
+                    {/* Text-specific options */}
+                    {isText && (
+                        <div className="space-y-3 pt-2 border-t border-panel-border">
+                            <div className="text-xs text-gray-500">Text Content</div>
+                            <textarea
+                                value={selection.content || ''}
+                                onChange={(e) => onUpdate({ content: e.target.value })}
+                                className="w-full h-20 text-sm"
+                                placeholder="Enter text..."
+                            />
+                            <div className="text-xs text-gray-500">Font</div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-400">Size</label>
+                                    <input
+                                        type="number"
+                                        value={selection.fontSize || 14}
+                                        onChange={(e) => onUpdate({ fontSize: parseInt(e.target.value) })}
+                                        className="w-full"
+                                        min="8"
+                                        max="72"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400">Family</label>
+                                    <select
+                                        value={selection.fontFamily || 'Arial'}
+                                        onChange={(e) => onUpdate({ fontFamily: e.target.value })}
+                                        className="w-full"
+                                    >
+                                        <option value="Arial">Arial</option>
+                                        <option value="Helvetica">Helvetica</option>
+                                        <option value="Times New Roman">Times</option>
+                                        <option value="Courier New">Courier</option>
+                                        <option value="Georgia">Georgia</option>
+                                        <option value="Verdana">Verdana</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="text-xs text-gray-500">Colors</div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400">Text</label>
+                                    <input
+                                        type="color"
+                                        value={selection.color || '#000000'}
+                                        onChange={(e) => onUpdate({ color: e.target.value })}
+                                        className="w-8 h-6"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400">Bg</label>
+                                    <input
+                                        type="color"
+                                        value={selection.backgroundColor === 'transparent' ? '#ffffff' : (selection.backgroundColor || '#ffffff')}
+                                        onChange={(e) => onUpdate({ backgroundColor: e.target.value })}
+                                        className="w-8 h-6"
+                                    />
+                                    <label className="flex items-center gap-1 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={selection.backgroundColor === 'transparent'}
+                                            onChange={(e) => onUpdate({ backgroundColor: e.target.checked ? 'transparent' : '#ffffff' })}
+                                            className="w-3 h-3"
+                                        />
+                                        <span className="text-xs text-gray-400">None</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -1893,20 +2104,20 @@
                     )}
 
                     {/* Style - for non-info-point, non-symbol, non-measurement elements */}
-                    {!isInfoPoint && !isSymbol && !isMeasurement && (
+                    {!isInfoPoint && !isSymbol && !isMeasurement && !isText && (
                         <div className="space-y-2 pt-2 border-t border-panel-border">
                             <div className="text-xs text-gray-500">Style</div>
                             <div className="flex items-center gap-2">
                                 <label className="text-xs text-gray-400 w-16">Stroke</label>
                                 <input
                                     type="color"
-                                    value={styles.stroke}
-                                    onChange={(e) => onStyleChange({ stroke: e.target.value })}
+                                    value={selection.stroke || styles.stroke || '#000000'}
+                                    onChange={(e) => onUpdate({ stroke: e.target.value })}
                                 />
                                 <input
                                     type="number"
-                                    value={styles.strokeWidth}
-                                    onChange={(e) => onStyleChange({ strokeWidth: parseFloat(e.target.value) })}
+                                    value={selection.strokeWidth || styles.strokeWidth || 2}
+                                    onChange={(e) => onUpdate({ strokeWidth: parseFloat(e.target.value) })}
                                     className="w-16"
                                     min="1"
                                     max="20"
@@ -1916,12 +2127,12 @@
                                 <label className="text-xs text-gray-400 w-16">Fill</label>
                                 <input
                                     type="color"
-                                    value={styles.fill === 'none' ? '#ffffff' : styles.fill}
-                                    onChange={(e) => onStyleChange({ fill: e.target.value })}
+                                    value={(selection.fill && selection.fill !== 'none') ? selection.fill : '#ffffff'}
+                                    onChange={(e) => onUpdate({ fill: e.target.value })}
                                 />
                                 <button
-                                    className={`px-2 py-1 text-xs rounded ${styles.fill === 'none' ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300'}`}
-                                    onClick={() => onStyleChange({ fill: styles.fill === 'none' ? '#ffffff' : 'none' })}
+                                    className={`px-2 py-1 text-xs rounded ${(!selection.fill || selection.fill === 'none') ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300'}`}
+                                    onClick={() => onUpdate({ fill: (!selection.fill || selection.fill === 'none') ? '#ffffff' : 'none' })}
                                 >
                                     None
                                 </button>
@@ -1996,7 +2207,18 @@
         // LAYER PANEL COMPONENT
         // ============================================
         
-        const LayerPanel = ({ snippets, masks, elements, infoPoints, symbols = [], measurements = [], onSelectItem, selectedId, onDeleteItem, onToggleVisibility }) => {
+        const LayerPanel = ({ snippets, masks, elements, infoPoints, symbols = [], measurements = [], onSelectItem, selectedId, onDeleteItem, onToggleVisibility, onToggleLock }) => {
+            const [searchQuery, setSearchQuery] = useState('');
+            const [typeFilter, setTypeFilter] = useState('all'); // 'all', 'snippet', 'mask', 'element', 'symbol', 'measurement', 'infoPoint'
+
+            // Filter function
+            const filterItems = (items) => {
+                if (!searchQuery) return items;
+                return items.filter(item =>
+                    (item.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+                );
+            };
+
             const renderItem = (item, type) => (
                 <div
                     key={item.id}
@@ -2015,6 +2237,9 @@
                     >
                         {item.visible !== false ? <Icons.Eye /> : <Icons.EyeOff />}
                     </button>
+                    {item.locked && (
+                        <span className="text-yellow-500 text-xs">🔒</span>
+                    )}
                     <span className="flex-1 text-sm truncate">
                         {item.name || `${type} ${item.id.slice(-4)}`}
                     </span>
@@ -2022,85 +2247,142 @@
                         className="w-5 h-5 text-gray-400 hover:text-danger"
                         onClick={(e) => {
                             e.stopPropagation();
-                            onDeleteItem(item.id, type);
+                            if (!item.locked) onDeleteItem(item.id, type);
                         }}
+                        disabled={item.locked}
+                        title={item.locked ? "Unlock to delete" : "Delete"}
                     >
                         <Icons.Trash />
                     </button>
                 </div>
             );
 
+            // Apply filters
+            const filteredSnippets = typeFilter === 'all' || typeFilter === 'snippet' ? filterItems(snippets) : [];
+            const filteredMasks = typeFilter === 'all' || typeFilter === 'mask' ? filterItems(masks) : [];
+            const filteredElements = typeFilter === 'all' || typeFilter === 'element' ? filterItems(elements) : [];
+            const filteredSymbols = typeFilter === 'all' || typeFilter === 'symbol' ? filterItems(symbols) : [];
+            const filteredMeasurements = typeFilter === 'all' || typeFilter === 'measurement' ? filterItems(measurements) : [];
+            const filteredInfoPoints = typeFilter === 'all' || typeFilter === 'infoPoint' ? filterItems(infoPoints) : [];
+
+            const totalCount = filteredSnippets.length + filteredMasks.length + filteredElements.length +
+                              filteredSymbols.length + filteredMeasurements.length + filteredInfoPoints.length;
+
             return (
-                <div className="p-2 space-y-4">
-                    {/* Snippets */}
-                    <div>
-                        <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
-                            <div className="w-4 h-4"><Icons.Scissors /></div>
-                            <span>Snippets ({snippets.length})</span>
-                        </div>
-                        <div className="space-y-1">
-                            {snippets.map(s => renderItem(s, 'snippet'))}
-                        </div>
+                <div className="p-2 space-y-3">
+                    {/* Search and Filter */}
+                    <div className="space-y-2">
+                        <input
+                            type="text"
+                            placeholder="Search layers..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded focus:border-accent focus:outline-none"
+                        />
+                        <select
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value)}
+                            className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-700 rounded"
+                        >
+                            <option value="all">All Types ({snippets.length + masks.length + elements.length + symbols.length + measurements.length + infoPoints.length})</option>
+                            <option value="snippet">Snippets ({snippets.length})</option>
+                            <option value="mask">Masks ({masks.length})</option>
+                            <option value="element">Elements ({elements.length})</option>
+                            <option value="symbol">Symbols ({symbols.length})</option>
+                            <option value="measurement">Measurements ({measurements.length})</option>
+                            <option value="infoPoint">Info Points ({infoPoints.length})</option>
+                        </select>
+                        {searchQuery && (
+                            <div className="text-xs text-gray-500">
+                                Found {totalCount} item{totalCount !== 1 ? 's' : ''}
+                            </div>
+                        )}
                     </div>
+
+                    {/* Snippets */}
+                    {filteredSnippets.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                                <div className="w-4 h-4"><Icons.Scissors /></div>
+                                <span>Snippets ({filteredSnippets.length})</span>
+                            </div>
+                            <div className="space-y-1">
+                                {filteredSnippets.map(s => renderItem(s, 'snippet'))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Masks */}
-                    <div>
-                        <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
-                            <div className="w-4 h-4"><Icons.Mask /></div>
-                            <span>Masks ({masks.length})</span>
+                    {filteredMasks.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                                <div className="w-4 h-4"><Icons.Mask /></div>
+                                <span>Masks ({filteredMasks.length})</span>
+                            </div>
+                            <div className="space-y-1">
+                                {filteredMasks.map(m => renderItem(m, 'mask'))}
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            {masks.map(m => renderItem(m, 'mask'))}
-                        </div>
-                    </div>
+                    )}
 
                     {/* Elements */}
-                    <div>
-                        <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
-                            <div className="w-4 h-4"><Icons.Layers /></div>
-                            <span>Elements ({elements.length})</span>
+                    {filteredElements.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                                <div className="w-4 h-4"><Icons.Layers /></div>
+                                <span>Elements ({filteredElements.length})</span>
+                            </div>
+                            <div className="space-y-1">
+                                {filteredElements.map(e => renderItem(e, 'element'))}
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            {elements.map(e => renderItem(e, 'element'))}
-                        </div>
-                    </div>
+                    )}
 
                     {/* Symbols */}
-                    {symbols.length > 0 && (
+                    {filteredSymbols.length > 0 && (
                         <div>
                             <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
                                 <div className="w-4 h-4"><Icons.Component /></div>
-                                <span>Symbols ({symbols.length})</span>
+                                <span>Symbols ({filteredSymbols.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {symbols.map(s => renderItem(s, 'symbol'))}
+                                {filteredSymbols.map(s => renderItem(s, 'symbol'))}
                             </div>
                         </div>
                     )}
 
                     {/* Measurements */}
-                    {measurements.length > 0 && (
+                    {filteredMeasurements.length > 0 && (
                         <div>
                             <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
                                 <div className="w-4 h-4"><Icons.Measure /></div>
-                                <span>Measurements ({measurements.length})</span>
+                                <span>Measurements ({filteredMeasurements.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {measurements.map(m => renderItem(m, 'measurement'))}
+                                {filteredMeasurements.map(m => renderItem(m, 'measurement'))}
                             </div>
                         </div>
                     )}
 
                     {/* Info Points */}
-                    <div>
-                        <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
-                            <div className="w-4 h-4"><Icons.InfoPoint /></div>
-                            <span>Info Points ({infoPoints.length})</span>
+                    {filteredInfoPoints.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 uppercase tracking-wider">
+                                <div className="w-4 h-4"><Icons.InfoPoint /></div>
+                                <span>Info Points ({filteredInfoPoints.length})</span>
+                            </div>
+                            <div className="space-y-1">
+                                {filteredInfoPoints.map(p => renderItem(p, 'infoPoint'))}
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            {infoPoints.map(p => renderItem(p, 'infoPoint'))}
+                    )}
+
+                    {/* Empty state */}
+                    {totalCount === 0 && (
+                        <div className="text-center text-gray-500 py-4 text-sm">
+                            {searchQuery ? 'No matching items found' : 'No layers yet'}
                         </div>
-                    </div>
+                    )}
                 </div>
             );
         };
@@ -2995,9 +3277,11 @@
             // Selection State
             const [selectedId, setSelectedId] = useState(null);
             const [selectedType, setSelectedType] = useState(null);
+            const [selectedIds, setSelectedIds] = useState([]); // Multi-select: [{id, type}, ...]
             const [isDragging, setIsDragging] = useState(false);
             const [dragStart, setDragStart] = useState(null);
-            
+            const [selectionBox, setSelectionBox] = useState(null); // {x1, y1, x2, y2} for box selection
+
             // Element State
             const [snippets, setSnippets] = useState([]);
             const [masks, setMasks] = useState([]);
@@ -3006,6 +3290,12 @@
             const [symbols, setSymbols] = useState([]);
             const [measurements, setMeasurements] = useState([]);
             const [cableAnnotations, setCableAnnotations] = useState([]);
+            const [comments, setComments] = useState([]);
+            const [selectedComment, setSelectedComment] = useState(null);
+            const [showCommentDialog, setShowCommentDialog] = useState(false);
+            const [commentDialogPosition, setCommentDialogPosition] = useState({ x: 0, y: 0 });
+            const [newCommentText, setNewCommentText] = useState('');
+            const [replyText, setReplyText] = useState('');
 
             // Clipboard State for Copy/Paste
             const [clipboard, setClipboard] = useState(null);
@@ -3030,12 +3320,25 @@
                 return saved ? JSON.parse(saved) : [];
             });
 
+            // Template Library
+            const [templateLibrary, setTemplateLibrary] = useState(() => {
+                const saved = localStorage.getItem('markupTemplateLibrary');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+            const [templateName, setTemplateName] = useState('');
+            const [templateDescription, setTemplateDescription] = useState('');
+
             // UI State
             const [showGrid, setShowGrid] = useState(true);
             const [styles, setStyles] = useState({ ...DEFAULT_STYLES });
             const [leftPanelTab, setLeftPanelTab] = useState('tools'); // 'tools' | 'layers' | 'library' | 'symbols' | 'data'
             const [showCalibrationDialog, setShowCalibrationDialog] = useState(false);
             const [showExportMenu, setShowExportMenu] = useState(false);
+            const [theme, setTheme] = useState(() => {
+                const saved = localStorage.getItem('markupToolTheme');
+                return saved || 'dark';
+            });
 
             // Resizable sidebar state
             const [leftSidebarWidth, setLeftSidebarWidth] = useState(256); // 256px = w-64
@@ -3055,6 +3358,13 @@
                     return () => document.removeEventListener('click', handleClickOutside);
                 }
             }, [showExportMenu]);
+
+            // Theme effect - apply theme class to body
+            useEffect(() => {
+                document.body.classList.remove('light-theme', 'dark-theme');
+                document.body.classList.add(theme === 'light' ? 'light-theme' : 'dark-theme');
+                localStorage.setItem('markupToolTheme', theme);
+            }, [theme]);
 
             // Sidebar resize handlers
             useEffect(() => {
@@ -3086,7 +3396,132 @@
                 }
             }, [isResizingLeft, isResizingRight]);
 
+            // Auto-save to localStorage
+            useEffect(() => {
+                // Load saved versions on mount
+                try {
+                    const saved = localStorage.getItem('markup_tool_versions');
+                    if (saved) {
+                        setAutoSaveVersions(JSON.parse(saved));
+                    }
+                } catch (e) {
+                    console.error('Failed to load auto-save versions:', e);
+                }
+            }, []);
+
+            // Auto-save effect
+            useEffect(() => {
+                if (!pdfData) return;
+
+                const saveData = () => {
+                    const saveState = {
+                        timestamp: Date.now(),
+                        date: new Date().toLocaleString(),
+                        fileName: pdfData?.fileName || 'Untitled',
+                        data: {
+                            snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations
+                        }
+                    };
+
+                    setAutoSaveVersions(prev => {
+                        const newVersions = [saveState, ...prev].slice(0, MAX_VERSIONS);
+                        try {
+                            localStorage.setItem('markup_tool_versions', JSON.stringify(newVersions));
+                        } catch (e) {
+                            console.error('Failed to save to localStorage:', e);
+                        }
+                        return newVersions;
+                    });
+                    setLastSaveTime(new Date());
+                    setHasUnsavedChanges(false);
+                };
+
+                // Initial save after loading
+                const timer = setInterval(saveData, AUTO_SAVE_INTERVAL);
+
+                return () => clearInterval(timer);
+            }, [pdfData, snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations]);
+
+            // Track unsaved changes
+            useEffect(() => {
+                if (pdfData) {
+                    setHasUnsavedChanges(true);
+                }
+            }, [snippets, masks, elements, infoPoints, symbols, measurements]);
+
+            // Warn before leaving with unsaved changes
+            useEffect(() => {
+                const handleBeforeUnload = (e) => {
+                    if (hasUnsavedChanges && pdfData) {
+                        e.preventDefault();
+                        e.returnValue = '';
+                    }
+                };
+                window.addEventListener('beforeunload', handleBeforeUnload);
+                return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+            }, [hasUnsavedChanges, pdfData]);
+
+            // Restore from version
+            const restoreVersion = (version) => {
+                if (version?.data) {
+                    setSnippets(version.data.snippets || []);
+                    setMasks(version.data.masks || []);
+                    setElements(version.data.elements || []);
+                    setInfoPoints(version.data.infoPoints || []);
+                    setSymbols(version.data.symbols || []);
+                    setMeasurements(version.data.measurements || []);
+                    setCableAnnotations(version.data.cableAnnotations || []);
+                    setShowVersionHistory(false);
+                    setHasUnsavedChanges(false);
+                }
+            };
+
+            // Helper functions for align/distribute
+            const getSelectedItems = () => {
+                return selectedIds.map(sel => {
+                    let item;
+                    if (sel.type === 'element') item = elements.find(e => e.id === sel.id);
+                    else if (sel.type === 'snippet') item = snippets.find(s => s.id === sel.id);
+                    else if (sel.type === 'mask') item = masks.find(m => m.id === sel.id);
+                    else if (sel.type === 'symbol') item = symbols.find(s => s.id === sel.id);
+                    else if (sel.type === 'infoPoint') item = infoPoints.find(p => p.id === sel.id);
+                    else if (sel.type === 'measurement') item = measurements.find(m => m.id === sel.id);
+                    return item ? { ...item, type: sel.type } : null;
+                }).filter(Boolean);
+            };
+
+            const applyToSelected = (updateFn) => {
+                selectedIds.forEach(sel => {
+                    const item = getSelectedItems().find(i => i.id === sel.id);
+                    if (!item || item.locked) return;
+                    const updates = updateFn(item);
+                    if (sel.type === 'element') setElements(prev => prev.map(e => e.id === sel.id ? { ...e, ...updates } : e));
+                    else if (sel.type === 'snippet') setSnippets(prev => prev.map(s => s.id === sel.id ? { ...s, ...updates } : s));
+                    else if (sel.type === 'mask') setMasks(prev => prev.map(m => m.id === sel.id ? { ...m, ...updates } : m));
+                    else if (sel.type === 'symbol') setSymbols(prev => prev.map(s => s.id === sel.id ? { ...s, ...updates } : s));
+                    else if (sel.type === 'infoPoint') setInfoPoints(prev => prev.map(p => p.id === sel.id ? { ...p, ...updates } : p));
+                    else if (sel.type === 'measurement') setMeasurements(prev => prev.map(m => m.id === sel.id ? { ...m, ...updates } : m));
+                });
+            };
+
+            const applyToSelectedById = (id, type, updates) => {
+                if (type === 'element') setElements(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+                else if (type === 'snippet') setSnippets(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+                else if (type === 'mask') setMasks(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
+                else if (type === 'symbol') setSymbols(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+                else if (type === 'infoPoint') setInfoPoints(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+                else if (type === 'measurement') setMeasurements(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
+            };
+
             const [showInfoSummary, setShowInfoSummary] = useState(false);
+
+            // Auto-save state
+            const [autoSaveVersions, setAutoSaveVersions] = useState([]);
+            const [lastSaveTime, setLastSaveTime] = useState(null);
+            const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+            const [showVersionHistory, setShowVersionHistory] = useState(false);
+            const AUTO_SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+            const MAX_VERSIONS = 10;
 
             // Refs
             const canvasRef = useRef(null);
@@ -3282,7 +3717,7 @@
                                 m.visible !== false && pointToLineDistance(coords, m.x1, m.y1, m.x2, m.y2) <= 10
                             );
 
-                            // Check elements (rectangles, circles, lines)
+                            // Check elements (rectangles, circles, lines, arrows, text)
                             const clickedElement = elements.find(el => {
                                 if (el.visible === false) return false;
                                 switch (el.type) {
@@ -3293,53 +3728,67 @@
                                     case 'line':
                                     case 'arrow':
                                         return pointToLineDistance(coords, el.x1, el.y1, el.x2, el.y2) <= 8;
+                                    case 'text':
+                                        const textWidth = el.width || 100;
+                                        const textHeight = el.height || 20;
+                                        return pointInRect(coords, { x: el.x, y: el.y, width: textWidth, height: textHeight });
                                     default:
                                         return false;
                                 }
                             });
 
-                            if (clickedInfoPoint) {
-                                setSelectedId(clickedInfoPoint.id);
-                                setSelectedType('infoPoint');
-                                setIsDragging(true);
-                                setDragStart({ x: coords.x - clickedInfoPoint.x, y: coords.y - clickedInfoPoint.y });
-                            } else if (clickedSymbol) {
-                                setSelectedId(clickedSymbol.id);
-                                setSelectedType('symbol');
-                                setIsDragging(true);
-                                setDragStart({ x: coords.x - clickedSymbol.x, y: coords.y - clickedSymbol.y });
-                            } else if (clickedMeasurement) {
-                                setSelectedId(clickedMeasurement.id);
-                                setSelectedType('measurement');
-                                setIsDragging(true);
-                                const midX = (clickedMeasurement.x1 + clickedMeasurement.x2) / 2;
-                                const midY = (clickedMeasurement.y1 + clickedMeasurement.y2) / 2;
-                                setDragStart({ x: coords.x - midX, y: coords.y - midY });
-                            } else if (clickedElement) {
-                                setSelectedId(clickedElement.id);
-                                setSelectedType('element');
-                                setIsDragging(true);
-                                // For lines and arrows, store drag start relative to line midpoint
-                                if (clickedElement.type === 'line' || clickedElement.type === 'arrow') {
-                                    const midX = (clickedElement.x1 + clickedElement.x2) / 2;
-                                    const midY = (clickedElement.y1 + clickedElement.y2) / 2;
-                                    setDragStart({ x: coords.x - midX, y: coords.y - midY });
+                            // Determine what was clicked and its type
+                            let clickedItem = null;
+                            let clickedItemType = null;
+                            if (clickedInfoPoint) { clickedItem = clickedInfoPoint; clickedItemType = 'infoPoint'; }
+                            else if (clickedSymbol) { clickedItem = clickedSymbol; clickedItemType = 'symbol'; }
+                            else if (clickedMeasurement) { clickedItem = clickedMeasurement; clickedItemType = 'measurement'; }
+                            else if (clickedElement) { clickedItem = clickedElement; clickedItemType = 'element'; }
+                            else if (clickedSnippet) { clickedItem = clickedSnippet; clickedItemType = 'snippet'; }
+                            else if (clickedMask) { clickedItem = clickedMask; clickedItemType = 'mask'; }
+
+                            if (clickedItem) {
+                                // Ctrl+click for multi-select
+                                if (e.ctrlKey) {
+                                    const existingIndex = selectedIds.findIndex(s => s.id === clickedItem.id && s.type === clickedItemType);
+                                    if (existingIndex >= 0) {
+                                        // Remove from selection
+                                        setSelectedIds(prev => prev.filter((_, i) => i !== existingIndex));
+                                    } else {
+                                        // Add to selection
+                                        setSelectedIds(prev => [...prev, { id: clickedItem.id, type: clickedItemType }]);
+                                    }
+                                    // Also update single selection for properties panel
+                                    setSelectedId(clickedItem.id);
+                                    setSelectedType(clickedItemType);
                                 } else {
-                                    setDragStart({ x: coords.x - clickedElement.x, y: coords.y - clickedElement.y });
+                                    // Single click - clear multi-selection and select only this item
+                                    setSelectedIds([{ id: clickedItem.id, type: clickedItemType }]);
+                                    setSelectedId(clickedItem.id);
+                                    setSelectedType(clickedItemType);
+                                    // Only allow dragging if item is not locked
+                                    if (!clickedItem.locked) {
+                                        setIsDragging(true);
+                                        // Calculate drag start based on item type
+                                        if (clickedItemType === 'measurement' ||
+                                            (clickedItemType === 'element' && (clickedItem.type === 'line' || clickedItem.type === 'arrow'))) {
+                                            const midX = (clickedItem.x1 + clickedItem.x2) / 2;
+                                            const midY = (clickedItem.y1 + clickedItem.y2) / 2;
+                                            setDragStart({ x: coords.x - midX, y: coords.y - midY });
+                                        } else {
+                                            setDragStart({ x: coords.x - clickedItem.x, y: coords.y - clickedItem.y });
+                                        }
+                                    }
                                 }
-                            } else if (clickedSnippet) {
-                                setSelectedId(clickedSnippet.id);
-                                setSelectedType('snippet');
-                                setIsDragging(true);
-                                setDragStart({ x: coords.x - clickedSnippet.x, y: coords.y - clickedSnippet.y });
-                            } else if (clickedMask) {
-                                setSelectedId(clickedMask.id);
-                                setSelectedType('mask');
-                                setIsDragging(true);
-                                setDragStart({ x: coords.x - clickedMask.x, y: coords.y - clickedMask.y });
                             } else {
-                                setSelectedId(null);
-                                setSelectedType(null);
+                                // Clicked on empty space - start box selection
+                                if (!e.ctrlKey) {
+                                    setSelectedId(null);
+                                    setSelectedType(null);
+                                    setSelectedIds([]);
+                                }
+                                // Start box selection
+                                setSelectionBox({ x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
                             }
                             break;
 
@@ -3370,6 +3819,13 @@
                             setSelectedId(newInfoPoint.id);
                             setSelectedType('infoPoint');
                             history.push({ snippets, masks, elements, infoPoints: [...infoPoints, newInfoPoint], symbols, measurements, cableAnnotations });
+                            break;
+
+                        case OPERATIONS.COMMENT:
+                            // Open comment dialog at clicked position
+                            setCommentDialogPosition({ x: coords.x, y: coords.y });
+                            setShowCommentDialog(true);
+                            setNewCommentText('');
                             break;
 
                         case OPERATIONS.CALIBRATE:
@@ -3416,6 +3872,33 @@
                                 setSelectedType('symbol');
                                 history.push({ snippets, masks, elements, infoPoints, symbols: [...symbols, newSymbol], measurements, cableAnnotations });
                             }
+                            break;
+
+                        case OPERATIONS.TEXT:
+                            // Text annotation: place text at click location
+                            const newText = {
+                                id: generateId(),
+                                type: 'text',
+                                name: `Text ${elements.filter(e => e.type === 'text').length + 1}`,
+                                x: coords.x,
+                                y: coords.y,
+                                content: 'Double-click to edit',
+                                fontSize: styles.fontSize || 14,
+                                fontFamily: styles.fontFamily || 'Arial',
+                                color: styles.stroke || '#000000',
+                                backgroundColor: 'transparent',
+                                padding: 4,
+                                width: 150,
+                                height: 24,
+                                rotation: 0,
+                                visible: true,
+                                locked: false
+                            };
+                            setElements(prev => [...prev, newText]);
+                            setSelectedId(newText.id);
+                            setSelectedType('element');
+                            setSelectedIds([{ id: newText.id, type: 'element' }]);
+                            history.push({ snippets, masks, elements: [...elements, newText], infoPoints, symbols, measurements, cableAnnotations });
                             break;
 
                         case OPERATIONS.SNIPPET:
@@ -3503,7 +3986,12 @@
                 if (isDrawing) {
                     setDrawEnd(coords);
                 }
-            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints, elements, symbols, measurements]);
+
+                // Update box selection
+                if (selectionBox) {
+                    setSelectionBox(prev => ({ ...prev, x2: coords.x, y2: coords.y }));
+                }
+            }, [isPanning, panStart, isDragging, selectedId, selectedType, dragStart, isDrawing, screenToCanvas, snippets, masks, infoPoints, elements, symbols, measurements, selectionBox]);
             
             const handleMouseUp = useCallback((e) => {
                 const coords = screenToCanvas(e.clientX, e.clientY);
@@ -3519,7 +4007,87 @@
                     history.push({ snippets: [...snippets], masks: [...masks], elements: [...elements], infoPoints: [...infoPoints], symbols: [...symbols], measurements: [...measurements], cableAnnotations: [...cableAnnotations] });
                     return;
                 }
-                
+
+                // Complete box selection
+                if (selectionBox) {
+                    const boxX1 = Math.min(selectionBox.x1, selectionBox.x2);
+                    const boxY1 = Math.min(selectionBox.y1, selectionBox.y2);
+                    const boxX2 = Math.max(selectionBox.x1, selectionBox.x2);
+                    const boxY2 = Math.max(selectionBox.y1, selectionBox.y2);
+                    const boxWidth = boxX2 - boxX1;
+                    const boxHeight = boxY2 - boxY1;
+
+                    // Only select if box is larger than 5px
+                    if (boxWidth > 5 || boxHeight > 5) {
+                        const newSelection = [];
+
+                        // Check snippets
+                        snippets.filter(s => s.visible !== false).forEach(s => {
+                            if (s.x >= boxX1 && s.x + s.width <= boxX2 && s.y >= boxY1 && s.y + s.height <= boxY2) {
+                                newSelection.push({ id: s.id, type: 'snippet' });
+                            }
+                        });
+
+                        // Check masks
+                        masks.filter(m => m.visible !== false).forEach(m => {
+                            if (m.x >= boxX1 && m.x + m.width <= boxX2 && m.y >= boxY1 && m.y + m.height <= boxY2) {
+                                newSelection.push({ id: m.id, type: 'mask' });
+                            }
+                        });
+
+                        // Check elements
+                        elements.filter(el => el.visible !== false).forEach(el => {
+                            if (el.type === 'rectangle' || el.type === 'text') {
+                                if (el.x >= boxX1 && el.x + (el.width || 100) <= boxX2 && el.y >= boxY1 && el.y + (el.height || 20) <= boxY2) {
+                                    newSelection.push({ id: el.id, type: 'element' });
+                                }
+                            } else if (el.type === 'circle') {
+                                if (el.x - el.radius >= boxX1 && el.x + el.radius <= boxX2 && el.y - el.radius >= boxY1 && el.y + el.radius <= boxY2) {
+                                    newSelection.push({ id: el.id, type: 'element' });
+                                }
+                            } else if (el.type === 'line' || el.type === 'arrow') {
+                                if (el.x1 >= boxX1 && el.x1 <= boxX2 && el.y1 >= boxY1 && el.y1 <= boxY2 &&
+                                    el.x2 >= boxX1 && el.x2 <= boxX2 && el.y2 >= boxY1 && el.y2 <= boxY2) {
+                                    newSelection.push({ id: el.id, type: 'element' });
+                                }
+                            }
+                        });
+
+                        // Check info points
+                        infoPoints.filter(p => p.visible !== false).forEach(p => {
+                            if (p.x >= boxX1 && p.x <= boxX2 && p.y >= boxY1 && p.y <= boxY2) {
+                                newSelection.push({ id: p.id, type: 'infoPoint' });
+                            }
+                        });
+
+                        // Check symbols
+                        symbols.filter(s => s.visible !== false).forEach(s => {
+                            const w = s.width * (s.scale || 1);
+                            const h = s.height * (s.scale || 1);
+                            if (s.x >= boxX1 && s.x + w <= boxX2 && s.y >= boxY1 && s.y + h <= boxY2) {
+                                newSelection.push({ id: s.id, type: 'symbol' });
+                            }
+                        });
+
+                        // Check measurements
+                        measurements.filter(m => m.visible !== false).forEach(m => {
+                            if (m.x1 >= boxX1 && m.x1 <= boxX2 && m.y1 >= boxY1 && m.y1 <= boxY2 &&
+                                m.x2 >= boxX1 && m.x2 <= boxX2 && m.y2 >= boxY1 && m.y2 <= boxY2) {
+                                newSelection.push({ id: m.id, type: 'measurement' });
+                            }
+                        });
+
+                        if (newSelection.length > 0) {
+                            setSelectedIds(e.ctrlKey ? [...selectedIds, ...newSelection] : newSelection);
+                            // Set first item as primary selection for properties panel
+                            setSelectedId(newSelection[0].id);
+                            setSelectedType(newSelection[0].type);
+                        }
+                    }
+                    setSelectionBox(null);
+                    return;
+                }
+
                 if (isDrawing && drawStart) {
                     const x = Math.min(drawStart.x, coords.x);
                     const y = Math.min(drawStart.y, coords.y);
@@ -3761,8 +4329,10 @@
                                 if (!e.ctrlKey) setCurrentTool(OPERATIONS.CIRCLE);
                                 break;
                             case 'i': setCurrentTool(OPERATIONS.INFO_POINT); break;
+                            case 't': setCurrentTool(OPERATIONS.TEXT); break;
                             case 'd': setCurrentTool(OPERATIONS.MEASURE); break;
                             case 'p': setCurrentTool(OPERATIONS.SYMBOL); break;
+                            case 'k': setCurrentTool(OPERATIONS.COMMENT); break;
                             case 'escape':
                                 setSelectedId(null);
                                 setSelectedType(null);
@@ -3772,22 +4342,53 @@
                                 break;
                             case 'delete':
                             case 'backspace':
-                                if (selectedId) {
-                                    if (selectedType === 'snippet') {
-                                        setSnippets(prev => prev.filter(s => s.id !== selectedId));
-                                    } else if (selectedType === 'mask') {
-                                        setMasks(prev => prev.filter(m => m.id !== selectedId));
-                                    } else if (selectedType === 'element') {
-                                        setElements(prev => prev.filter(e => e.id !== selectedId));
-                                    } else if (selectedType === 'infoPoint') {
-                                        setInfoPoints(prev => prev.filter(p => p.id !== selectedId));
-                                    } else if (selectedType === 'symbol') {
-                                        setSymbols(prev => prev.filter(s => s.id !== selectedId));
-                                    } else if (selectedType === 'measurement') {
-                                        setMeasurements(prev => prev.filter(m => m.id !== selectedId));
-                                    }
+                                // Multi-select delete (skip locked items)
+                                if (selectedIds.length > 0) {
+                                    // Filter out locked items
+                                    const snippetIds = selectedIds.filter(s => s.type === 'snippet').map(s => s.id).filter(id => !snippets.find(s => s.id === id)?.locked);
+                                    const maskIds = selectedIds.filter(s => s.type === 'mask').map(s => s.id).filter(id => !masks.find(m => m.id === id)?.locked);
+                                    const elementIds = selectedIds.filter(s => s.type === 'element').map(s => s.id).filter(id => !elements.find(e => e.id === id)?.locked);
+                                    const infoPointIds = selectedIds.filter(s => s.type === 'infoPoint').map(s => s.id).filter(id => !infoPoints.find(p => p.id === id)?.locked);
+                                    const symbolIds = selectedIds.filter(s => s.type === 'symbol').map(s => s.id).filter(id => !symbols.find(s => s.id === id)?.locked);
+                                    const measurementIds = selectedIds.filter(s => s.type === 'measurement').map(s => s.id).filter(id => !measurements.find(m => m.id === id)?.locked);
+
+                                    if (snippetIds.length) setSnippets(prev => prev.filter(s => !snippetIds.includes(s.id)));
+                                    if (maskIds.length) setMasks(prev => prev.filter(m => !maskIds.includes(m.id)));
+                                    if (elementIds.length) setElements(prev => prev.filter(e => !elementIds.includes(e.id)));
+                                    if (infoPointIds.length) setInfoPoints(prev => prev.filter(p => !infoPointIds.includes(p.id)));
+                                    if (symbolIds.length) setSymbols(prev => prev.filter(s => !symbolIds.includes(s.id)));
+                                    if (measurementIds.length) setMeasurements(prev => prev.filter(m => !measurementIds.includes(m.id)));
+
+                                    setSelectedIds([]);
                                     setSelectedId(null);
                                     setSelectedType(null);
+                                } else if (selectedId) {
+                                    // Single selection delete (check if locked)
+                                    let isLocked = false;
+                                    if (selectedType === 'snippet') isLocked = snippets.find(s => s.id === selectedId)?.locked;
+                                    else if (selectedType === 'mask') isLocked = masks.find(m => m.id === selectedId)?.locked;
+                                    else if (selectedType === 'element') isLocked = elements.find(e => e.id === selectedId)?.locked;
+                                    else if (selectedType === 'infoPoint') isLocked = infoPoints.find(p => p.id === selectedId)?.locked;
+                                    else if (selectedType === 'symbol') isLocked = symbols.find(s => s.id === selectedId)?.locked;
+                                    else if (selectedType === 'measurement') isLocked = measurements.find(m => m.id === selectedId)?.locked;
+
+                                    if (!isLocked) {
+                                        if (selectedType === 'snippet') {
+                                            setSnippets(prev => prev.filter(s => s.id !== selectedId));
+                                        } else if (selectedType === 'mask') {
+                                            setMasks(prev => prev.filter(m => m.id !== selectedId));
+                                        } else if (selectedType === 'element') {
+                                            setElements(prev => prev.filter(e => e.id !== selectedId));
+                                        } else if (selectedType === 'infoPoint') {
+                                            setInfoPoints(prev => prev.filter(p => p.id !== selectedId));
+                                        } else if (selectedType === 'symbol') {
+                                            setSymbols(prev => prev.filter(s => s.id !== selectedId));
+                                        } else if (selectedType === 'measurement') {
+                                            setMeasurements(prev => prev.filter(m => m.id !== selectedId));
+                                        }
+                                        setSelectedId(null);
+                                        setSelectedType(null);
+                                    }
                                 }
                                 break;
                             case '0':
@@ -4264,6 +4865,94 @@
                 URL.revokeObjectURL(url);
             };
 
+            // BOM (Bill of Materials) Export
+            const handleExportBOM = () => {
+                // Count all symbols by type
+                const symbolCounts = {};
+                symbols.forEach(s => {
+                    const symbolDef = HV_SYMBOLS[s.symbolId];
+                    if (symbolDef) {
+                        const key = `${symbolDef.category}|${symbolDef.name}`;
+                        if (!symbolCounts[key]) {
+                            symbolCounts[key] = {
+                                category: symbolDef.category,
+                                name: symbolDef.name,
+                                symbolId: s.symbolId,
+                                count: 0,
+                                items: []
+                            };
+                        }
+                        symbolCounts[key].count++;
+                        symbolCounts[key].items.push({
+                            id: s.id,
+                            name: s.name,
+                            x: Math.round(s.x),
+                            y: Math.round(s.y),
+                            specs: s.specs || {}
+                        });
+                    }
+                });
+
+                // Count elements by type
+                const elementCounts = {};
+                elements.forEach(el => {
+                    const key = el.type;
+                    if (!elementCounts[key]) {
+                        elementCounts[key] = { type: el.type, count: 0 };
+                    }
+                    elementCounts[key].count++;
+                });
+
+                // Generate CSV
+                const headers = ['Category', 'Item', 'Symbol ID', 'Quantity', 'Locations'];
+                const rows = [];
+
+                // Add symbols to BOM
+                Object.values(symbolCounts).forEach(item => {
+                    rows.push([
+                        item.category,
+                        item.name,
+                        item.symbolId,
+                        item.count,
+                        item.items.map(i => `(${i.x},${i.y})`).join('; ')
+                    ]);
+                });
+
+                // Add elements summary
+                if (Object.keys(elementCounts).length > 0) {
+                    rows.push(['', '', '', '', '']); // Empty row separator
+                    rows.push(['ELEMENTS', '', '', '', '']);
+                    Object.values(elementCounts).forEach(item => {
+                        rows.push(['Drawing', item.type.charAt(0).toUpperCase() + item.type.slice(1), '', item.count, '']);
+                    });
+                }
+
+                // Add info points count
+                if (infoPoints.length > 0) {
+                    rows.push(['', '', '', '', '']);
+                    rows.push(['ANNOTATIONS', '', '', '', '']);
+                    rows.push(['Annotation', 'Info Points', '', infoPoints.length, '']);
+                }
+
+                // Add measurements count
+                if (measurements.length > 0) {
+                    rows.push(['Annotation', 'Measurements', '', measurements.length, '']);
+                }
+
+                const csvContent = [
+                    headers.join(','),
+                    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'bill-of-materials.csv';
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
             const handleSaveProject = () => {
                 const project = {
                     meta: {
@@ -4455,6 +5144,121 @@
             const selectedSnippet = selectedType === 'snippet' ? snippets.find(s => s.id === selectedId) : null;
 
             // ============================================
+            // TEMPLATE FUNCTIONS
+            // ============================================
+
+            const handleSaveTemplate = () => {
+                if (!templateName.trim()) {
+                    alert('Please enter a template name');
+                    return;
+                }
+
+                const template = {
+                    id: generateId(),
+                    name: templateName.trim(),
+                    description: templateDescription.trim(),
+                    createdAt: new Date().toISOString(),
+                    data: {
+                        elements: elements.map(el => ({ ...el, id: undefined })),
+                        symbols: symbols.map(s => ({ ...s, id: undefined })),
+                        infoPoints: infoPoints.map(ip => ({ ...ip, id: undefined })),
+                        measurements: measurements.map(m => ({ ...m, id: undefined })),
+                    }
+                };
+
+                const newLibrary = [...templateLibrary, template];
+                setTemplateLibrary(newLibrary);
+                localStorage.setItem('markupTemplateLibrary', JSON.stringify(newLibrary));
+
+                setShowTemplateDialog(false);
+                setTemplateName('');
+                setTemplateDescription('');
+            };
+
+            const handleApplyTemplate = (template) => {
+                if (!pdfData) {
+                    alert('Please load a document first');
+                    return;
+                }
+
+                // Generate new IDs for all elements
+                const newElements = template.data.elements.map(el => ({ ...el, id: generateId() }));
+                const newSymbols = template.data.symbols.map(s => ({ ...s, id: generateId() }));
+                const newInfoPoints = template.data.infoPoints.map(ip => ({ ...ip, id: generateId() }));
+                const newMeasurements = template.data.measurements.map(m => ({ ...m, id: generateId() }));
+
+                // Add to existing elements
+                setElements(prev => [...prev, ...newElements]);
+                setSymbols(prev => [...prev, ...newSymbols]);
+                setInfoPoints(prev => [...prev, ...newInfoPoints]);
+                setMeasurements(prev => [...prev, ...newMeasurements]);
+
+                // Save to history
+                history.push({ snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations });
+            };
+
+            const handleDeleteTemplate = (templateId) => {
+                const newLibrary = templateLibrary.filter(t => t.id !== templateId);
+                setTemplateLibrary(newLibrary);
+                localStorage.setItem('markupTemplateLibrary', JSON.stringify(newLibrary));
+            };
+
+            // ============================================
+            // COMMENT FUNCTIONS
+            // ============================================
+
+            const handleAddComment = () => {
+                if (!newCommentText.trim()) return;
+
+                const newComment = {
+                    id: generateId(),
+                    x: commentDialogPosition.x,
+                    y: commentDialogPosition.y,
+                    text: newCommentText.trim(),
+                    author: 'User',
+                    createdAt: new Date().toISOString(),
+                    status: 'pending',
+                    replies: [],
+                    page: currentPage
+                };
+
+                setComments(prev => [...prev, newComment]);
+                setShowCommentDialog(false);
+                setNewCommentText('');
+                history.push({ snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations });
+            };
+
+            const handleUpdateCommentStatus = (commentId, newStatus) => {
+                setComments(prev => prev.map(c =>
+                    c.id === commentId ? { ...c, status: newStatus } : c
+                ));
+                history.push({ snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations });
+            };
+
+            const handleAddReply = (commentId) => {
+                if (!replyText.trim()) return;
+
+                const reply = {
+                    id: generateId(),
+                    text: replyText.trim(),
+                    author: 'User',
+                    createdAt: new Date().toISOString()
+                };
+
+                setComments(prev => prev.map(c =>
+                    c.id === commentId ? { ...c, replies: [...c.replies, reply] } : c
+                ));
+                setReplyText('');
+                history.push({ snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations });
+            };
+
+            const handleDeleteComment = (commentId) => {
+                setComments(prev => prev.filter(c => c.id !== commentId));
+                setSelectedComment(null);
+                history.push({ snippets, masks, elements, infoPoints, symbols, measurements, cableAnnotations });
+            };
+
+            // ============================================
             // RENDER
             // ============================================
             
@@ -4552,7 +5356,20 @@
                         </div>
                         
                         <div className="flex-1" />
-                        
+
+                        {/* Theme Toggle */}
+                        <button
+                            className="p-2 rounded text-gray-300 hover:bg-gray-700"
+                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                            title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+                        >
+                            <div className="w-4 h-4">
+                                {theme === 'dark' ? <Icons.Sun /> : <Icons.Moon />}
+                            </div>
+                        </button>
+
+                        <div className="h-6 w-px bg-panel-border" />
+
                         {/* Export Dropdown */}
                         <div className="relative">
                             <button
@@ -4598,6 +5415,14 @@
                                         onClick={() => { handleExportMeasurements(); setShowExportMenu(false); }}
                                     >
                                         Measurements (CSV)
+                                    </button>
+                                    <div className="border-t border-panel-border my-1" />
+                                    <button
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex items-center gap-2"
+                                        onClick={() => { handleExportBOM(); setShowExportMenu(false); }}
+                                    >
+                                        <span className="text-green-400">📋</span>
+                                        Bill of Materials (CSV)
                                     </button>
                                 </div>
                             )}
@@ -4652,6 +5477,22 @@
                                 >
                                     <div className="w-4 h-4"><Icons.List /></div>
                                     <span className="text-[10px]">Data</span>
+                                </button>
+                                <button
+                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'pages' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
+                                    onClick={() => setLeftPanelTab('pages')}
+                                    title="Page Thumbnails"
+                                >
+                                    <div className="w-4 h-4"><Icons.Pages /></div>
+                                    <span className="text-[10px]">Pages</span>
+                                </button>
+                                <button
+                                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-colors ${leftPanelTab === 'templates' ? 'text-accent bg-panel-bg' : 'text-gray-500 hover:text-gray-300'}`}
+                                    onClick={() => setLeftPanelTab('templates')}
+                                    title="Templates"
+                                >
+                                    <div className="w-4 h-4"><Icons.Template /></div>
+                                    <span className="text-[10px]">Templates</span>
                                 </button>
                             </div>
                             
@@ -4748,9 +5589,23 @@
                                                 }}
                                             />
                                             <ToolButton
+                                                icon={Icons.Type}
+                                                label="Text"
+                                                shortcut="T"
+                                                active={currentTool === OPERATIONS.TEXT}
+                                                onClick={() => setCurrentTool(OPERATIONS.TEXT)}
+                                            />
+                                            <ToolButton
                                                 icon={Icons.List}
                                                 label="Summary"
                                                 onClick={() => setShowInfoSummary(true)}
+                                            />
+                                            <ToolButton
+                                                icon={Icons.Comment}
+                                                label="Comment"
+                                                shortcut="K"
+                                                active={currentTool === OPERATIONS.COMMENT}
+                                                onClick={() => setCurrentTool(OPERATIONS.COMMENT)}
                                             />
                                         </div>
                                     </div>
@@ -4823,7 +5678,213 @@
                                                 onClick={() => setShowGrid(prev => !prev)}
                                             />
                                         </div>
+                                        {/* Quick Zoom Presets */}
+                                        <div className="flex gap-1 mt-2">
+                                            {[50, 100, 150, 200].map(pct => (
+                                                <button
+                                                    key={pct}
+                                                    className={`flex-1 px-1 py-1 text-xs rounded ${Math.round(zoom * 100) === pct ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                                                    onClick={() => setZoom(pct / 100)}
+                                                >
+                                                    {pct}%
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {/* Zoom to Selection */}
+                                        {selectedIds.length > 0 && (
+                                            <button
+                                                className="w-full mt-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 hover:bg-gray-600 rounded"
+                                                onClick={() => {
+                                                    // Calculate bounds of selected items
+                                                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                                                    selectedIds.forEach(sel => {
+                                                        let item;
+                                                        if (sel.type === 'element') item = elements.find(e => e.id === sel.id);
+                                                        else if (sel.type === 'snippet') item = snippets.find(s => s.id === sel.id);
+                                                        else if (sel.type === 'mask') item = masks.find(m => m.id === sel.id);
+                                                        else if (sel.type === 'symbol') item = symbols.find(s => s.id === sel.id);
+                                                        else if (sel.type === 'infoPoint') item = infoPoints.find(p => p.id === sel.id);
+                                                        if (item) {
+                                                            if (item.x1 !== undefined) {
+                                                                minX = Math.min(minX, item.x1, item.x2);
+                                                                minY = Math.min(minY, item.y1, item.y2);
+                                                                maxX = Math.max(maxX, item.x1, item.x2);
+                                                                maxY = Math.max(maxY, item.y1, item.y2);
+                                                            } else if (item.radius !== undefined) {
+                                                                minX = Math.min(minX, item.x - item.radius);
+                                                                minY = Math.min(minY, item.y - item.radius);
+                                                                maxX = Math.max(maxX, item.x + item.radius);
+                                                                maxY = Math.max(maxY, item.y + item.radius);
+                                                            } else {
+                                                                minX = Math.min(minX, item.x);
+                                                                minY = Math.min(minY, item.y);
+                                                                maxX = Math.max(maxX, item.x + (item.width || 20));
+                                                                maxY = Math.max(maxY, item.y + (item.height || 20));
+                                                            }
+                                                        }
+                                                    });
+                                                    if (minX !== Infinity) {
+                                                        const container = containerRef.current;
+                                                        const padding = 50;
+                                                        const boundsWidth = maxX - minX + padding * 2;
+                                                        const boundsHeight = maxY - minY + padding * 2;
+                                                        const scaleX = container.clientWidth / boundsWidth;
+                                                        const scaleY = container.clientHeight / boundsHeight;
+                                                        const newZoom = clamp(Math.min(scaleX, scaleY), ZOOM_LIMITS.min, ZOOM_LIMITS.max);
+                                                        setZoom(newZoom);
+                                                        setPanOffset({
+                                                            x: (container.clientWidth - boundsWidth * newZoom) / 2 - (minX - padding) * newZoom,
+                                                            y: (container.clientHeight - boundsHeight * newZoom) / 2 - (minY - padding) * newZoom
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                Zoom to Selection
+                                            </button>
+                                        )}
                                     </div>
+
+                                    {/* Align & Distribute - only show when multiple items selected */}
+                                    {selectedIds.length >= 2 && (
+                                        <div className="p-3 border-b border-panel-border">
+                                            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Align ({selectedIds.length} items)</div>
+                                            <div className="grid grid-cols-6 gap-1 mb-2">
+                                                <button
+                                                    className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                                    title="Align Left"
+                                                    onClick={() => {
+                                                        const items = getSelectedItems();
+                                                        const minX = Math.min(...items.map(i => i.x ?? i.x1 ?? 0));
+                                                        applyToSelected(item => ({
+                                                            ...(item.x !== undefined ? { x: minX } : {}),
+                                                            ...(item.x1 !== undefined ? { x1: minX, x2: minX + (item.x2 - item.x1) } : {})
+                                                        }));
+                                                    }}
+                                                >⬅</button>
+                                                <button
+                                                    className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                                    title="Align Center Horizontal"
+                                                    onClick={() => {
+                                                        const items = getSelectedItems();
+                                                        const centers = items.map(i => (i.x ?? i.x1 ?? 0) + ((i.width ?? (i.x2 - i.x1) ?? 0) / 2));
+                                                        const avgCenter = centers.reduce((a, b) => a + b, 0) / centers.length;
+                                                        applyToSelected((item, idx) => {
+                                                            const w = item.width ?? (item.x2 - item.x1) ?? 0;
+                                                            return {
+                                                                ...(item.x !== undefined ? { x: avgCenter - w / 2 } : {}),
+                                                                ...(item.x1 !== undefined ? { x1: avgCenter - w / 2, x2: avgCenter + w / 2 } : {})
+                                                            };
+                                                        });
+                                                    }}
+                                                >⬌</button>
+                                                <button
+                                                    className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                                    title="Align Right"
+                                                    onClick={() => {
+                                                        const items = getSelectedItems();
+                                                        const maxX = Math.max(...items.map(i => (i.x ?? i.x1 ?? 0) + (i.width ?? (i.x2 - i.x1) ?? 0)));
+                                                        applyToSelected(item => {
+                                                            const w = item.width ?? (item.x2 - item.x1) ?? 0;
+                                                            return {
+                                                                ...(item.x !== undefined ? { x: maxX - w } : {}),
+                                                                ...(item.x1 !== undefined ? { x1: maxX - w, x2: maxX } : {})
+                                                            };
+                                                        });
+                                                    }}
+                                                >➡</button>
+                                                <button
+                                                    className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                                    title="Align Top"
+                                                    onClick={() => {
+                                                        const items = getSelectedItems();
+                                                        const minY = Math.min(...items.map(i => i.y ?? i.y1 ?? 0));
+                                                        applyToSelected(item => ({
+                                                            ...(item.y !== undefined ? { y: minY } : {}),
+                                                            ...(item.y1 !== undefined ? { y1: minY, y2: minY + (item.y2 - item.y1) } : {})
+                                                        }));
+                                                    }}
+                                                >⬆</button>
+                                                <button
+                                                    className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                                    title="Align Center Vertical"
+                                                    onClick={() => {
+                                                        const items = getSelectedItems();
+                                                        const centers = items.map(i => (i.y ?? i.y1 ?? 0) + ((i.height ?? (i.y2 - i.y1) ?? 0) / 2));
+                                                        const avgCenter = centers.reduce((a, b) => a + b, 0) / centers.length;
+                                                        applyToSelected(item => {
+                                                            const h = item.height ?? (item.y2 - item.y1) ?? 0;
+                                                            return {
+                                                                ...(item.y !== undefined ? { y: avgCenter - h / 2 } : {}),
+                                                                ...(item.y1 !== undefined ? { y1: avgCenter - h / 2, y2: avgCenter + h / 2 } : {})
+                                                            };
+                                                        });
+                                                    }}
+                                                >⬍</button>
+                                                <button
+                                                    className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                                    title="Align Bottom"
+                                                    onClick={() => {
+                                                        const items = getSelectedItems();
+                                                        const maxY = Math.max(...items.map(i => (i.y ?? i.y1 ?? 0) + (i.height ?? (i.y2 - i.y1) ?? 0)));
+                                                        applyToSelected(item => {
+                                                            const h = item.height ?? (item.y2 - item.y1) ?? 0;
+                                                            return {
+                                                                ...(item.y !== undefined ? { y: maxY - h } : {}),
+                                                                ...(item.y1 !== undefined ? { y1: maxY - h, y2: maxY } : {})
+                                                            };
+                                                        });
+                                                    }}
+                                                >⬇</button>
+                                            </div>
+                                            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Distribute</div>
+                                            <div className="grid grid-cols-2 gap-1">
+                                                <button
+                                                    className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                                    title="Distribute Horizontally"
+                                                    onClick={() => {
+                                                        if (selectedIds.length < 3) return;
+                                                        const items = getSelectedItems().sort((a, b) => (a.x ?? a.x1 ?? 0) - (b.x ?? b.x1 ?? 0));
+                                                        const minX = items[0].x ?? items[0].x1 ?? 0;
+                                                        const lastItem = items[items.length - 1];
+                                                        const maxX = (lastItem.x ?? lastItem.x1 ?? 0) + (lastItem.width ?? (lastItem.x2 - lastItem.x1) ?? 0);
+                                                        const totalWidth = items.reduce((sum, i) => sum + (i.width ?? (i.x2 - i.x1) ?? 20), 0);
+                                                        const gap = (maxX - minX - totalWidth) / (items.length - 1);
+                                                        let currentX = minX;
+                                                        items.forEach((item, idx) => {
+                                                            const w = item.width ?? (item.x2 - item.x1) ?? 20;
+                                                            applyToSelectedById(item.id, item.type, {
+                                                                ...(item.x !== undefined ? { x: currentX } : {}),
+                                                                ...(item.x1 !== undefined ? { x1: currentX, x2: currentX + w } : {})
+                                                            });
+                                                            currentX += w + gap;
+                                                        });
+                                                    }}
+                                                >↔ Horizontal</button>
+                                                <button
+                                                    className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                                                    title="Distribute Vertically"
+                                                    onClick={() => {
+                                                        if (selectedIds.length < 3) return;
+                                                        const items = getSelectedItems().sort((a, b) => (a.y ?? a.y1 ?? 0) - (b.y ?? b.y1 ?? 0));
+                                                        const minY = items[0].y ?? items[0].y1 ?? 0;
+                                                        const lastItem = items[items.length - 1];
+                                                        const maxY = (lastItem.y ?? lastItem.y1 ?? 0) + (lastItem.height ?? (lastItem.y2 - lastItem.y1) ?? 0);
+                                                        const totalHeight = items.reduce((sum, i) => sum + (i.height ?? (i.y2 - i.y1) ?? 20), 0);
+                                                        const gap = (maxY - minY - totalHeight) / (items.length - 1);
+                                                        let currentY = minY;
+                                                        items.forEach((item, idx) => {
+                                                            const h = item.height ?? (item.y2 - item.y1) ?? 20;
+                                                            applyToSelectedById(item.id, item.type, {
+                                                                ...(item.y !== undefined ? { y: currentY } : {}),
+                                                                ...(item.y1 !== undefined ? { y1: currentY, y2: currentY + h } : {})
+                                                            });
+                                                            currentY += h + gap;
+                                                        });
+                                                    }}
+                                                >↕ Vertical</button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Style Settings */}
                                     <div className="p-3">
@@ -4897,6 +5958,96 @@
                                         onDeleteFromLibrary={handleDeleteFromLibrary}
                                         currentSnippet={selectedSnippet}
                                     />
+                                </div>
+                            ) : leftPanelTab === 'pages' ? (
+                                <div className="flex-1 overflow-y-auto p-3">
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-3">Page Thumbnails</div>
+                                    {pdfData ? (
+                                        <div className="space-y-2">
+                                            {pdfData.pages.map((page, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`cursor-pointer rounded-lg border-2 transition-all ${currentPage === index ? 'border-accent' : 'border-transparent hover:border-gray-600'}`}
+                                                    onClick={() => setCurrentPage(index)}
+                                                >
+                                                    <div className="relative">
+                                                        <img
+                                                            src={page.imageData}
+                                                            alt={`Page ${index + 1}`}
+                                                            className="w-full rounded-md"
+                                                            style={{ maxHeight: '150px', objectFit: 'contain', backgroundColor: '#fff' }}
+                                                        />
+                                                        <div className={`absolute bottom-0 left-0 right-0 text-center py-1 text-xs rounded-b-md ${currentPage === index ? 'bg-accent text-white' : 'bg-gray-800 text-gray-300'}`}>
+                                                            Page {index + 1} of {pdfData.pages.length}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-gray-500 py-8">
+                                            <div className="w-12 h-12 mx-auto mb-2 text-gray-600">
+                                                <Icons.Pages />
+                                            </div>
+                                            <p className="text-sm">No document loaded</p>
+                                            <p className="text-xs mt-1">Load a PDF to see page thumbnails</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : leftPanelTab === 'templates' ? (
+                                <div className="flex-1 overflow-y-auto p-3">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider">Templates</div>
+                                        <button
+                                            className="text-xs px-2 py-1 bg-accent text-white rounded hover:bg-accent-hover"
+                                            onClick={() => setShowTemplateDialog(true)}
+                                            disabled={elements.length === 0 && symbols.length === 0 && infoPoints.length === 0}
+                                            title="Save current elements as template"
+                                        >
+                                            + Save
+                                        </button>
+                                    </div>
+                                    {templateLibrary.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {templateLibrary.map((template) => (
+                                                <div
+                                                    key={template.id}
+                                                    className="bg-gray-800 rounded-lg p-3 border border-panel-border"
+                                                >
+                                                    <div className="flex items-start justify-between mb-1">
+                                                        <div className="font-medium text-sm text-white">{template.name}</div>
+                                                        <button
+                                                            className="text-gray-500 hover:text-red-400 p-1"
+                                                            onClick={() => handleDeleteTemplate(template.id)}
+                                                            title="Delete template"
+                                                        >
+                                                            <div className="w-3 h-3"><Icons.Trash /></div>
+                                                        </button>
+                                                    </div>
+                                                    {template.description && (
+                                                        <p className="text-xs text-gray-400 mb-2">{template.description}</p>
+                                                    )}
+                                                    <div className="text-[10px] text-gray-500 mb-2">
+                                                        {template.data.elements.length} elements, {template.data.symbols.length} symbols, {template.data.infoPoints.length} info points
+                                                    </div>
+                                                    <button
+                                                        className="w-full text-xs py-1.5 bg-accent/20 text-accent rounded hover:bg-accent/30"
+                                                        onClick={() => handleApplyTemplate(template)}
+                                                    >
+                                                        Apply Template
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-gray-500 py-8">
+                                            <div className="w-12 h-12 mx-auto mb-2 text-gray-600">
+                                                <Icons.Template />
+                                            </div>
+                                            <p className="text-sm">No templates saved</p>
+                                            <p className="text-xs mt-1">Add elements and save as template</p>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="flex-1 overflow-hidden">
@@ -5123,7 +6274,7 @@
                                             
                                             {/* Elements */}
                                             {elements.filter(e => e.visible !== false).map(element => {
-                                                const isSelected = selectedId === element.id;
+                                                const isSelected = selectedId === element.id || selectedIds.some(s => s.id === element.id && s.type === 'element');
                                                 const hasPattern = element.fillPattern && element.fillPattern !== 'solid';
                                                 const fillOpacity = element.fillOpacity || 1;
                                                 const rotation = element.rotation || 0;
@@ -5187,6 +6338,13 @@
                                                                             style={{ cursor: 'grab' }}
                                                                         />
                                                                     </>
+                                                                )}
+                                                                {/* Lock indicator */}
+                                                                {element.locked && (
+                                                                    <g transform={`translate(${element.x + element.width - 12}, ${element.y + 4})`}>
+                                                                        <circle r={8} fill="rgba(234, 179, 8, 0.9)" />
+                                                                        <text x={0} y={4} textAnchor="middle" fontSize={10} fill="#000">🔒</text>
+                                                                    </g>
                                                                 )}
                                                             </g>
                                                         );
@@ -5266,6 +6424,49 @@
                                                                 )}
                                                             </g>
                                                         );
+                                                    case 'text':
+                                                        const textRotation = element.rotation || 0;
+                                                        const textCenterX = element.x + (element.width || 100) / 2;
+                                                        const textCenterY = element.y + (element.height || 20) / 2;
+                                                        return (
+                                                            <g key={element.id} transform={textRotation ? `rotate(${textRotation} ${textCenterX} ${textCenterY})` : undefined}>
+                                                                {/* Background */}
+                                                                {element.backgroundColor && element.backgroundColor !== 'transparent' && (
+                                                                    <rect
+                                                                        x={element.x - (element.padding || 4)}
+                                                                        y={element.y - (element.padding || 4)}
+                                                                        width={(element.width || 100) + (element.padding || 4) * 2}
+                                                                        height={(element.height || 20) + (element.padding || 4) * 2}
+                                                                        fill={element.backgroundColor}
+                                                                        rx={2}
+                                                                    />
+                                                                )}
+                                                                {/* Text */}
+                                                                <text
+                                                                    x={element.x}
+                                                                    y={element.y + (element.fontSize || 14)}
+                                                                    fill={element.color || '#000000'}
+                                                                    fontSize={element.fontSize || 14}
+                                                                    fontFamily={element.fontFamily || 'Arial'}
+                                                                    style={{ userSelect: 'none' }}
+                                                                >
+                                                                    {element.content || ''}
+                                                                </text>
+                                                                {/* Selection border */}
+                                                                {isSelected && (
+                                                                    <rect
+                                                                        x={element.x - 2}
+                                                                        y={element.y - 2}
+                                                                        width={(element.width || 100) + 4}
+                                                                        height={(element.height || 20) + 4}
+                                                                        fill="none"
+                                                                        stroke="#0ea5e9"
+                                                                        strokeWidth={2 / zoom}
+                                                                        strokeDasharray={`${4 / zoom}`}
+                                                                    />
+                                                                )}
+                                                            </g>
+                                                        );
                                                     default:
                                                         return null;
                                                 }
@@ -5273,7 +6474,7 @@
 
                                             {/* Symbols */}
                                             {symbols.filter(s => s.visible !== false).map(symbol => {
-                                                const isSelected = selectedId === symbol.id;
+                                                const isSelected = selectedId === symbol.id || selectedIds.some(s => s.id === symbol.id && s.type === 'symbol');
                                                 const symbolDef = HV_SYMBOLS[symbol.symbolId];
                                                 if (!symbolDef) return null;
                                                 const scale = symbol.scale || 1;
@@ -5527,6 +6728,69 @@
                                                 );
                                             })}
 
+                                            {/* Comments */}
+                                            {comments.filter(c => c.page === currentPage).map(comment => {
+                                                const status = COMMENT_STATUSES[comment.status] || COMMENT_STATUSES.pending;
+                                                const isSelected = selectedComment === comment.id;
+
+                                                return (
+                                                    <g
+                                                        key={comment.id}
+                                                        style={{ cursor: 'pointer' }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedComment(isSelected ? null : comment.id);
+                                                        }}
+                                                    >
+                                                        {/* Comment bubble */}
+                                                        <g transform={`translate(${comment.x}, ${comment.y})`}>
+                                                            {/* Selection indicator */}
+                                                            {isSelected && (
+                                                                <circle
+                                                                    cx={0}
+                                                                    cy={0}
+                                                                    r={18}
+                                                                    fill="none"
+                                                                    stroke="#0ea5e9"
+                                                                    strokeWidth={2 / zoom}
+                                                                    strokeDasharray={`${4 / zoom}`}
+                                                                />
+                                                            )}
+                                                            {/* Comment pin */}
+                                                            <circle
+                                                                cx={0}
+                                                                cy={0}
+                                                                r={14}
+                                                                fill={status.color}
+                                                                stroke="#ffffff"
+                                                                strokeWidth={2}
+                                                            />
+                                                            {/* Status icon */}
+                                                            <text
+                                                                x={0}
+                                                                y={5}
+                                                                textAnchor="middle"
+                                                                fill="#ffffff"
+                                                                fontSize="12"
+                                                                fontWeight="bold"
+                                                                style={{ pointerEvents: 'none' }}
+                                                            >
+                                                                {status.icon}
+                                                            </text>
+                                                            {/* Reply count badge */}
+                                                            {comment.replies.length > 0 && (
+                                                                <>
+                                                                    <circle cx={10} cy={-10} r={8} fill="#ef4444" />
+                                                                    <text x={10} y={-6} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">
+                                                                        {comment.replies.length}
+                                                                    </text>
+                                                                </>
+                                                            )}
+                                                        </g>
+                                                    </g>
+                                                );
+                                            })}
+
                                             {/* Drawing preview */}
                                             {isDrawing && drawStart && drawEnd && (
                                                 <g>
@@ -5599,11 +6863,25 @@
                                                     )}
                                                 </g>
                                             )}
+
+                                            {/* Selection Box */}
+                                            {selectionBox && (
+                                                <rect
+                                                    x={Math.min(selectionBox.x1, selectionBox.x2)}
+                                                    y={Math.min(selectionBox.y1, selectionBox.y2)}
+                                                    width={Math.abs(selectionBox.x2 - selectionBox.x1)}
+                                                    height={Math.abs(selectionBox.y2 - selectionBox.y1)}
+                                                    fill="rgba(14, 165, 233, 0.1)"
+                                                    stroke="#0ea5e9"
+                                                    strokeWidth={1 / zoom}
+                                                    strokeDasharray={`${4 / zoom}`}
+                                                />
+                                            )}
                                         </svg>
                                         
                                         {/* Snippet overlays (positioned divs for drag interaction) */}
                                         {snippets.filter(s => s.visible !== false).map(snippet => {
-                                            const isSelected = selectedId === snippet.id;
+                                            const isSelected = selectedId === snippet.id || selectedIds.some(s => s.id === snippet.id && s.type === 'snippet');
                                             const showBorder = isSelected || !snippet.hideBorder;
                                             const snippetRotation = snippet.rotation || 0;
                                             return (
@@ -5670,6 +6948,27 @@
                                     </>
                                 )}
                                 <span>Tool: {currentTool}</span>
+                                {selectedIds.length > 1 && (
+                                    <span className="text-accent">{selectedIds.length} items selected</span>
+                                )}
+                                {/* Auto-save status */}
+                                {pdfData && (
+                                    <span className="flex items-center gap-2">
+                                        {hasUnsavedChanges ? (
+                                            <span className="text-yellow-500">● Unsaved changes</span>
+                                        ) : lastSaveTime ? (
+                                            <span className="text-green-500">✓ Saved {lastSaveTime.toLocaleTimeString()}</span>
+                                        ) : null}
+                                        {autoSaveVersions.length > 0 && (
+                                            <button
+                                                className="text-gray-400 hover:text-white underline"
+                                                onClick={() => setShowVersionHistory(true)}
+                                            >
+                                                History ({autoSaveVersions.length})
+                                            </button>
+                                        )}
+                                    </span>
+                                )}
                                 {/* Calibration status */}
                                 {scaleCalibration.isCalibrated ? (
                                     <span className="text-green-400 flex items-center gap-1">
@@ -5783,10 +7082,268 @@
                         onConfirm={handleCalibrationComplete}
                         calibrationPoints={calibrationPoints}
                     />
+
+                    {/* Version History Modal */}
+                    {showVersionHistory && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowVersionHistory(false)}>
+                            <div className="bg-panel-bg rounded-lg shadow-xl w-96 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                                <div className="p-4 border-b border-panel-border flex items-center justify-between">
+                                    <h2 className="text-lg font-semibold">Version History</h2>
+                                    <button onClick={() => setShowVersionHistory(false)} className="text-gray-400 hover:text-white">
+                                        <Icons.Close />
+                                    </button>
+                                </div>
+                                <div className="p-4 overflow-y-auto max-h-[60vh]">
+                                    {autoSaveVersions.length === 0 ? (
+                                        <div className="text-center text-gray-500 py-8">No saved versions yet</div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {autoSaveVersions.map((version, idx) => (
+                                                <div
+                                                    key={version.timestamp}
+                                                    className="p-3 bg-gray-800 rounded hover:bg-gray-700 cursor-pointer"
+                                                    onClick={() => restoreVersion(version)}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-medium">{version.fileName}</span>
+                                                        {idx === 0 && <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded">Latest</span>}
+                                                    </div>
+                                                    <div className="text-xs text-gray-400 mt-1">{version.date}</div>
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        {(version.data.elements?.length || 0) + (version.data.snippets?.length || 0) + (version.data.symbols?.length || 0)} items
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-4 border-t border-panel-border">
+                                    <button
+                                        className="w-full px-4 py-2 bg-danger/20 text-danger rounded hover:bg-danger/30"
+                                        onClick={() => {
+                                            if (confirm('Clear all saved versions?')) {
+                                                setAutoSaveVersions([]);
+                                                localStorage.removeItem('markup_tool_versions');
+                                                setShowVersionHistory(false);
+                                            }
+                                        }}
+                                    >
+                                        Clear History
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Template Save Dialog */}
+                    {showTemplateDialog && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowTemplateDialog(false)}>
+                            <div className="bg-panel-bg rounded-lg shadow-xl w-96" onClick={e => e.stopPropagation()}>
+                                <div className="p-4 border-b border-panel-border">
+                                    <h2 className="text-lg font-semibold">Save as Template</h2>
+                                </div>
+                                <div className="p-4 space-y-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Template Name</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-gray-800 border border-panel-border rounded px-3 py-2 text-white"
+                                            value={templateName}
+                                            onChange={(e) => setTemplateName(e.target.value)}
+                                            placeholder="Enter template name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Description (optional)</label>
+                                        <textarea
+                                            className="w-full bg-gray-800 border border-panel-border rounded px-3 py-2 text-white resize-none"
+                                            rows="3"
+                                            value={templateDescription}
+                                            onChange={(e) => setTemplateDescription(e.target.value)}
+                                            placeholder="Enter description"
+                                        />
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                        This template will include: {elements.length} elements, {symbols.length} symbols, {infoPoints.length} info points, {measurements.length} measurements
+                                    </div>
+                                </div>
+                                <div className="p-4 border-t border-panel-border flex justify-end gap-2">
+                                    <button
+                                        className="px-4 py-2 text-gray-400 hover:text-white"
+                                        onClick={() => {
+                                            setShowTemplateDialog(false);
+                                            setTemplateName('');
+                                            setTemplateDescription('');
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover"
+                                        onClick={handleSaveTemplate}
+                                    >
+                                        Save Template
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* New Comment Dialog */}
+                    {showCommentDialog && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowCommentDialog(false)}>
+                            <div className="bg-panel-bg rounded-lg shadow-xl w-96" onClick={e => e.stopPropagation()}>
+                                <div className="p-4 border-b border-panel-border">
+                                    <h2 className="text-lg font-semibold">Add Comment</h2>
+                                </div>
+                                <div className="p-4">
+                                    <textarea
+                                        className="w-full bg-gray-800 border border-panel-border rounded px-3 py-2 text-white resize-none"
+                                        rows="4"
+                                        value={newCommentText}
+                                        onChange={(e) => setNewCommentText(e.target.value)}
+                                        placeholder="Enter your comment..."
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="p-4 border-t border-panel-border flex justify-end gap-2">
+                                    <button
+                                        className="px-4 py-2 text-gray-400 hover:text-white"
+                                        onClick={() => {
+                                            setShowCommentDialog(false);
+                                            setNewCommentText('');
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover"
+                                        onClick={handleAddComment}
+                                        disabled={!newCommentText.trim()}
+                                    >
+                                        Add Comment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Selected Comment Panel (floating) */}
+                    {selectedComment && (() => {
+                        const comment = comments.find(c => c.id === selectedComment);
+                        if (!comment) return null;
+                        const status = COMMENT_STATUSES[comment.status] || COMMENT_STATUSES.pending;
+
+                        return (
+                            <div
+                                className="fixed bottom-20 right-8 w-80 bg-panel-bg rounded-lg shadow-xl border border-panel-border z-40"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                {/* Header */}
+                                <div className="p-3 border-b border-panel-border flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
+                                            style={{ backgroundColor: status.color }}
+                                        >
+                                            {status.icon}
+                                        </div>
+                                        <span className="font-medium text-sm">{comment.author}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedComment(null)}
+                                        className="text-gray-400 hover:text-white p-1"
+                                    >
+                                        <div className="w-4 h-4"><Icons.X /></div>
+                                    </button>
+                                </div>
+
+                                {/* Comment content */}
+                                <div className="p-3 border-b border-panel-border">
+                                    <p className="text-sm text-gray-300">{comment.text}</p>
+                                    <div className="text-xs text-gray-500 mt-2">
+                                        {new Date(comment.createdAt).toLocaleString()}
+                                    </div>
+                                </div>
+
+                                {/* Status selector */}
+                                <div className="p-3 border-b border-panel-border">
+                                    <label className="text-xs text-gray-400 mb-2 block">Status</label>
+                                    <div className="flex gap-1">
+                                        {Object.entries(COMMENT_STATUSES).map(([key, val]) => (
+                                            <button
+                                                key={key}
+                                                className={`flex-1 py-1 px-2 text-xs rounded ${comment.status === key ? 'ring-2 ring-white' : 'opacity-60 hover:opacity-100'}`}
+                                                style={{ backgroundColor: val.color }}
+                                                onClick={() => handleUpdateCommentStatus(comment.id, key)}
+                                            >
+                                                {val.icon}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Replies */}
+                                {comment.replies.length > 0 && (
+                                    <div className="p-3 border-b border-panel-border max-h-40 overflow-y-auto">
+                                        <div className="text-xs text-gray-400 mb-2">Replies ({comment.replies.length})</div>
+                                        <div className="space-y-2">
+                                            {comment.replies.map(reply => (
+                                                <div key={reply.id} className="bg-gray-800 rounded p-2">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-xs font-medium text-gray-300">{reply.author}</span>
+                                                        <span className="text-[10px] text-gray-500">
+                                                            {new Date(reply.createdAt).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-400">{reply.text}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Add reply */}
+                                <div className="p-3 border-b border-panel-border">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="flex-1 bg-gray-800 border border-panel-border rounded px-2 py-1 text-sm text-white"
+                                            placeholder="Add reply..."
+                                            value={replyText}
+                                            onChange={(e) => setReplyText(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && replyText.trim()) {
+                                                    handleAddReply(comment.id);
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            className="px-3 py-1 bg-accent text-white text-xs rounded hover:bg-accent-hover"
+                                            onClick={() => handleAddReply(comment.id)}
+                                            disabled={!replyText.trim()}
+                                        >
+                                            Reply
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="p-3 flex justify-end">
+                                    <button
+                                        className="px-3 py-1 text-xs text-red-400 hover:text-red-300"
+                                        onClick={() => handleDeleteComment(comment.id)}
+                                    >
+                                        Delete Comment
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             );
         };
-        
+
         // ============================================
         // MOUNT APPLICATION
         // ============================================
