@@ -3713,6 +3713,7 @@
             });
             const [showVersionHistory, setShowVersionHistory] = useState(false);
             const [lastAutoSave, setLastAutoSave] = useState(null);
+            const [lastSaveTime, setLastSaveTime] = useState(null);
 
             // Resizable sidebar state
             const [leftSidebarWidth, setLeftSidebarWidth] = useState(256); // 256px = w-64
@@ -3774,6 +3775,7 @@
                             return updated;
                         });
                         setLastAutoSave(new Date().toLocaleTimeString());
+                        setLastSaveTime(new Date());
                         setHasUnsavedChanges(false);
                     }
                 }, 120000); // 2 minutes
