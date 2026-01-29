@@ -2449,7 +2449,7 @@
         // LAYER PANEL COMPONENT
         // ============================================
         
-        const LayerPanel = ({ snippets, masks, elements, infoPoints, symbols = [], measurements = [], onSelectItem, selectedId, onDeleteItem, onToggleVisibility, onToggleLock }) => {
+        const LayerPanel = ({ snippets, masks, elements, infoPoints, symbols = [], measurements = [], bezierCurves = [], cloudAnnotations = [], leaderLines = [], onSelectItem, selectedId, onDeleteItem, onToggleVisibility, onToggleLock }) => {
             const [searchQuery, setSearchQuery] = useState('');
             const [typeFilter, setTypeFilter] = useState('all'); // 'all', 'snippet', 'mask', 'element', 'symbol', 'measurement', 'infoPoint'
 
@@ -7360,6 +7360,9 @@
                                                 infoPoints={infoPoints}
                                                 symbols={symbols}
                                                 measurements={measurements}
+                                                bezierCurves={bezierCurves}
+                                                cloudAnnotations={cloudAnnotations}
+                                                leaderLines={leaderLines}
                                                 selectedId={selectedId}
                                                 onSelectItem={handleSelectItem}
                                                 onDeleteItem={handleDeleteItem}
