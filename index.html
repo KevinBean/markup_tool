@@ -869,6 +869,59 @@
             return Math.abs(area / 2);
         };
 
+        // ============================================
+        // LAYER ORDERING FUNCTIONS
+        // ============================================
+
+        // Move item to the front (end of array = renders on top)
+        const bringToFront = (array, itemId) => {
+            const index = array.findIndex(item => item.id === itemId);
+            if (index === -1 || index === array.length - 1) return array;
+            const newArray = [...array];
+            const [item] = newArray.splice(index, 1);
+            newArray.push(item);
+            return newArray;
+        };
+
+        // Move item to the back (start of array = renders behind)
+        const sendToBack = (array, itemId) => {
+            const index = array.findIndex(item => item.id === itemId);
+            if (index === -1 || index === 0) return array;
+            const newArray = [...array];
+            const [item] = newArray.splice(index, 1);
+            newArray.unshift(item);
+            return newArray;
+        };
+
+        // Move item one position forward (renders more on top)
+        const bringForward = (array, itemId) => {
+            const index = array.findIndex(item => item.id === itemId);
+            if (index === -1 || index === array.length - 1) return array;
+            const newArray = [...array];
+            [newArray[index], newArray[index + 1]] = [newArray[index + 1], newArray[index]];
+            return newArray;
+        };
+
+        // Move item one position backward (renders more behind)
+        const sendBackward = (array, itemId) => {
+            const index = array.findIndex(item => item.id === itemId);
+            if (index === -1 || index === 0) return array;
+            const newArray = [...array];
+            [newArray[index], newArray[index - 1]] = [newArray[index - 1], newArray[index]];
+            return newArray;
+        };
+
+        // Get item's position info for UI feedback
+        const getLayerPosition = (array, itemId) => {
+            const index = array.findIndex(item => item.id === itemId);
+            return {
+                index,
+                isFirst: index === 0,
+                isLast: index === array.length - 1,
+                total: array.length
+            };
+        };
+
         // Calculate alignment guides for an element being dragged
         const GUIDE_THRESHOLD = 8; // Pixels within which to snap
         const calculateAlignmentGuides = (draggedBounds, allElements, excludeId) => {
@@ -2449,7 +2502,7 @@
         // LAYER PANEL COMPONENT
         // ============================================
         
-        const LayerPanel = ({ snippets, masks, elements, infoPoints, symbols = [], measurements = [], bezierCurves = [], cloudAnnotations = [], leaderLines = [], onSelectItem, selectedId, onDeleteItem, onToggleVisibility, onToggleLock }) => {
+        const LayerPanel = ({ snippets, masks, elements, infoPoints, symbols = [], measurements = [], bezierCurves = [], cloudAnnotations = [], leaderLines = [], onSelectItem, selectedId, onDeleteItem, onToggleVisibility, onToggleLock, onMoveUp, onMoveDown }) => {
             const [searchQuery, setSearchQuery] = useState('');
             const [typeFilter, setTypeFilter] = useState('all'); // 'all', 'snippet', 'mask', 'element', 'symbol', 'measurement', 'infoPoint'
 
@@ -2461,43 +2514,81 @@
                 );
             };
 
-            const renderItem = (item, type) => (
-                <div
-                    key={item.id}
-                    className={`
-                        flex items-center gap-2 p-2 rounded cursor-pointer
-                        ${selectedId === item.id ? 'bg-accent/20 border border-accent' : 'hover:bg-gray-700'}
-                    `}
-                    onClick={() => onSelectItem(item, type)}
-                >
-                    <button
-                        className="w-5 h-5 text-gray-400 hover:text-white"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleVisibility(item.id, type);
-                        }}
+            // Get position info for an item
+            const getItemPosition = (items, itemId) => {
+                const index = items.findIndex(i => i.id === itemId);
+                return { index, isFirst: index === 0, isLast: index === items.length - 1 };
+            };
+
+            const renderItem = (item, type, items) => {
+                const pos = getItemPosition(items, item.id);
+                return (
+                    <div
+                        key={item.id}
+                        className={`
+                            flex items-center gap-1 p-2 rounded cursor-pointer group
+                            ${selectedId === item.id ? 'bg-accent/20 border border-accent' : 'hover:bg-gray-700'}
+                        `}
+                        onClick={() => onSelectItem(item, type)}
                     >
-                        {item.visible !== false ? <Icons.Eye /> : <Icons.EyeOff />}
-                    </button>
-                    {item.locked && (
-                        <span className="text-yellow-500 text-xs">🔒</span>
-                    )}
-                    <span className="flex-1 text-sm truncate">
-                        {item.name || `${type} ${item.id.slice(-4)}`}
-                    </span>
-                    <button
-                        className="w-5 h-5 text-gray-400 hover:text-danger"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (!item.locked) onDeleteItem(item.id, type);
-                        }}
-                        disabled={item.locked}
-                        title={item.locked ? "Unlock to delete" : "Delete"}
-                    >
-                        <Icons.Trash />
-                    </button>
-                </div>
-            );
+                        <button
+                            className="w-5 h-5 text-gray-400 hover:text-white"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleVisibility(item.id, type);
+                            }}
+                        >
+                            {item.visible !== false ? <Icons.Eye /> : <Icons.EyeOff />}
+                        </button>
+                        {item.locked && (
+                            <span className="text-yellow-500 text-xs">🔒</span>
+                        )}
+                        <span className="flex-1 text-sm truncate">
+                            {item.name || `${type} ${item.id.slice(-4)}`}
+                        </span>
+                        {/* Layer ordering controls */}
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                                className={`w-4 h-4 text-gray-400 hover:text-white ${pos.isLast ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!pos.isLast && onMoveUp) onMoveUp(item.id, type);
+                                }}
+                                disabled={pos.isLast}
+                                title="Move Up (renders on top)"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="18 15 12 9 6 15"></polyline>
+                                </svg>
+                            </button>
+                            <button
+                                className={`w-4 h-4 text-gray-400 hover:text-white ${pos.isFirst ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!pos.isFirst && onMoveDown) onMoveDown(item.id, type);
+                                }}
+                                disabled={pos.isFirst}
+                                title="Move Down (renders behind)"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                        <button
+                            className="w-5 h-5 text-gray-400 hover:text-danger"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (!item.locked) onDeleteItem(item.id, type);
+                            }}
+                            disabled={item.locked}
+                            title={item.locked ? "Unlock to delete" : "Delete"}
+                        >
+                            <Icons.Trash />
+                        </button>
+                    </div>
+                );
+            };
 
             // Apply filters
             const filteredSnippets = typeFilter === 'all' || typeFilter === 'snippet' ? filterItems(snippets) : [];
@@ -2556,7 +2647,7 @@
                                 <span>Snippets ({filteredSnippets.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {filteredSnippets.map(s => renderItem(s, 'snippet'))}
+                                {filteredSnippets.map(s => renderItem(s, 'snippet', snippets))}
                             </div>
                         </div>
                     )}
@@ -2569,7 +2660,7 @@
                                 <span>Masks ({filteredMasks.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {filteredMasks.map(m => renderItem(m, 'mask'))}
+                                {filteredMasks.map(m => renderItem(m, 'mask', masks))}
                             </div>
                         </div>
                     )}
@@ -2582,7 +2673,7 @@
                                 <span>Elements ({filteredElements.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {filteredElements.map(e => renderItem(e, 'element'))}
+                                {filteredElements.map(e => renderItem(e, 'element', elements))}
                             </div>
                         </div>
                     )}
@@ -2595,7 +2686,7 @@
                                 <span>Symbols ({filteredSymbols.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {filteredSymbols.map(s => renderItem(s, 'symbol'))}
+                                {filteredSymbols.map(s => renderItem(s, 'symbol', symbols))}
                             </div>
                         </div>
                     )}
@@ -2608,7 +2699,7 @@
                                 <span>Measurements ({filteredMeasurements.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {filteredMeasurements.map(m => renderItem(m, 'measurement'))}
+                                {filteredMeasurements.map(m => renderItem(m, 'measurement', measurements))}
                             </div>
                         </div>
                     )}
@@ -2621,7 +2712,7 @@
                                 <span>Info Points ({filteredInfoPoints.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {filteredInfoPoints.map(p => renderItem(p, 'infoPoint'))}
+                                {filteredInfoPoints.map(p => renderItem(p, 'infoPoint', infoPoints))}
                             </div>
                         </div>
                     )}
@@ -2634,7 +2725,7 @@
                                 <span>Bezier Curves ({filteredBeziers.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {filteredBeziers.map(b => renderItem(b, 'bezier'))}
+                                {filteredBeziers.map(b => renderItem(b, 'bezier', bezierCurves))}
                             </div>
                         </div>
                     )}
@@ -2647,7 +2738,7 @@
                                 <span>Cloud Annotations ({filteredClouds.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {filteredClouds.map(c => renderItem(c, 'cloud'))}
+                                {filteredClouds.map(c => renderItem(c, 'cloud', cloudAnnotations))}
                             </div>
                         </div>
                     )}
@@ -2660,7 +2751,7 @@
                                 <span>Leader Lines ({filteredLeaders.length})</span>
                             </div>
                             <div className="space-y-1">
-                                {filteredLeaders.map(l => renderItem(l, 'leader'))}
+                                {filteredLeaders.map(l => renderItem(l, 'leader', leaderLines))}
                             </div>
                         </div>
                     )}
@@ -5278,6 +5369,34 @@
                             case "'": setSmartGuidesEnabled(prev => !prev); break;
                             case '?': setShowShortcutsPanel(prev => !prev); break;
                             case 'n': setShowMinimap(prev => !prev); break;
+                            case ']':
+                                // ] = Bring Forward (one step)
+                                if (selectedId && selectedType) {
+                                    if (selectedType === 'snippet') setSnippets(prev => bringForward(prev, selectedId));
+                                    else if (selectedType === 'mask') setMasks(prev => bringForward(prev, selectedId));
+                                    else if (selectedType === 'element') setElements(prev => bringForward(prev, selectedId));
+                                    else if (selectedType === 'infoPoint') setInfoPoints(prev => bringForward(prev, selectedId));
+                                    else if (selectedType === 'symbol') setSymbols(prev => bringForward(prev, selectedId));
+                                    else if (selectedType === 'measurement') setMeasurements(prev => bringForward(prev, selectedId));
+                                    else if (selectedType === 'bezier') setBezierCurves(prev => bringForward(prev, selectedId));
+                                    else if (selectedType === 'cloud') setCloudAnnotations(prev => bringForward(prev, selectedId));
+                                    else if (selectedType === 'leader') setLeaderLines(prev => bringForward(prev, selectedId));
+                                }
+                                break;
+                            case '[':
+                                // [ = Send Backward (one step)
+                                if (selectedId && selectedType) {
+                                    if (selectedType === 'snippet') setSnippets(prev => sendBackward(prev, selectedId));
+                                    else if (selectedType === 'mask') setMasks(prev => sendBackward(prev, selectedId));
+                                    else if (selectedType === 'element') setElements(prev => sendBackward(prev, selectedId));
+                                    else if (selectedType === 'infoPoint') setInfoPoints(prev => sendBackward(prev, selectedId));
+                                    else if (selectedType === 'symbol') setSymbols(prev => sendBackward(prev, selectedId));
+                                    else if (selectedType === 'measurement') setMeasurements(prev => sendBackward(prev, selectedId));
+                                    else if (selectedType === 'bezier') setBezierCurves(prev => sendBackward(prev, selectedId));
+                                    else if (selectedType === 'cloud') setCloudAnnotations(prev => sendBackward(prev, selectedId));
+                                    else if (selectedType === 'leader') setLeaderLines(prev => sendBackward(prev, selectedId));
+                                }
+                                break;
                             case 'enter':
                                 // Finish polyline if drawing
                                 if (currentTool === OPERATIONS.POLYLINE && polylinePoints.length >= 2) {
@@ -5690,6 +5809,36 @@
                                         }
                                         setSelectedId(duped.id);
                                     }
+                                }
+                                break;
+                            case ']':
+                                // Ctrl+] = Bring to Front
+                                if (selectedId && selectedType) {
+                                    e.preventDefault();
+                                    if (selectedType === 'snippet') setSnippets(prev => bringToFront(prev, selectedId));
+                                    else if (selectedType === 'mask') setMasks(prev => bringToFront(prev, selectedId));
+                                    else if (selectedType === 'element') setElements(prev => bringToFront(prev, selectedId));
+                                    else if (selectedType === 'infoPoint') setInfoPoints(prev => bringToFront(prev, selectedId));
+                                    else if (selectedType === 'symbol') setSymbols(prev => bringToFront(prev, selectedId));
+                                    else if (selectedType === 'measurement') setMeasurements(prev => bringToFront(prev, selectedId));
+                                    else if (selectedType === 'bezier') setBezierCurves(prev => bringToFront(prev, selectedId));
+                                    else if (selectedType === 'cloud') setCloudAnnotations(prev => bringToFront(prev, selectedId));
+                                    else if (selectedType === 'leader') setLeaderLines(prev => bringToFront(prev, selectedId));
+                                }
+                                break;
+                            case '[':
+                                // Ctrl+[ = Send to Back
+                                if (selectedId && selectedType) {
+                                    e.preventDefault();
+                                    if (selectedType === 'snippet') setSnippets(prev => sendToBack(prev, selectedId));
+                                    else if (selectedType === 'mask') setMasks(prev => sendToBack(prev, selectedId));
+                                    else if (selectedType === 'element') setElements(prev => sendToBack(prev, selectedId));
+                                    else if (selectedType === 'infoPoint') setInfoPoints(prev => sendToBack(prev, selectedId));
+                                    else if (selectedType === 'symbol') setSymbols(prev => sendToBack(prev, selectedId));
+                                    else if (selectedType === 'measurement') setMeasurements(prev => sendToBack(prev, selectedId));
+                                    else if (selectedType === 'bezier') setBezierCurves(prev => sendToBack(prev, selectedId));
+                                    else if (selectedType === 'cloud') setCloudAnnotations(prev => sendToBack(prev, selectedId));
+                                    else if (selectedType === 'leader') setLeaderLines(prev => sendToBack(prev, selectedId));
                                 }
                                 break;
                         }
@@ -6152,6 +6301,31 @@
                 if (type === 'infoPoint') updateVisibility(infoPoints, setInfoPoints);
                 if (type === 'symbol') updateVisibility(symbols, setSymbols);
                 if (type === 'measurement') updateVisibility(measurements, setMeasurements);
+            };
+
+            // Layer ordering handlers (move up = bring forward, move down = send backward)
+            const handleMoveUp = (id, type) => {
+                if (type === 'snippet') setSnippets(prev => bringForward(prev, id));
+                else if (type === 'mask') setMasks(prev => bringForward(prev, id));
+                else if (type === 'element') setElements(prev => bringForward(prev, id));
+                else if (type === 'infoPoint') setInfoPoints(prev => bringForward(prev, id));
+                else if (type === 'symbol') setSymbols(prev => bringForward(prev, id));
+                else if (type === 'measurement') setMeasurements(prev => bringForward(prev, id));
+                else if (type === 'bezier') setBezierCurves(prev => bringForward(prev, id));
+                else if (type === 'cloud') setCloudAnnotations(prev => bringForward(prev, id));
+                else if (type === 'leader') setLeaderLines(prev => bringForward(prev, id));
+            };
+
+            const handleMoveDown = (id, type) => {
+                if (type === 'snippet') setSnippets(prev => sendBackward(prev, id));
+                else if (type === 'mask') setMasks(prev => sendBackward(prev, id));
+                else if (type === 'element') setElements(prev => sendBackward(prev, id));
+                else if (type === 'infoPoint') setInfoPoints(prev => sendBackward(prev, id));
+                else if (type === 'symbol') setSymbols(prev => sendBackward(prev, id));
+                else if (type === 'measurement') setMeasurements(prev => sendBackward(prev, id));
+                else if (type === 'bezier') setBezierCurves(prev => sendBackward(prev, id));
+                else if (type === 'cloud') setCloudAnnotations(prev => sendBackward(prev, id));
+                else if (type === 'leader') setLeaderLines(prev => sendBackward(prev, id));
             };
 
             const handleUpdateSelected = (updates) => {
@@ -7367,6 +7541,8 @@
                                                 onSelectItem={handleSelectItem}
                                                 onDeleteItem={handleDeleteItem}
                                                 onToggleVisibility={handleToggleVisibility}
+                                                onMoveUp={handleMoveUp}
+                                                onMoveDown={handleMoveDown}
                                             />
                                         ) : layersSubTab === 'data' ? (
                                             <InfoPointDataView
@@ -9446,6 +9622,14 @@
                                                 <div className="flex justify-between"><span className="text-gray-400">Toggle Minimap</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">N</kbd></div>
                                                 <div className="flex justify-between"><span className="text-gray-400">This panel</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">?</kbd></div>
                                             </div>
+
+                                            <h3 className="text-sm font-medium text-accent mt-4 mb-2">Layer Order</h3>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between"><span className="text-gray-400">Bring Forward</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">]</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Send Backward</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">[</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Bring to Front</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Ctrl+]</kbd></div>
+                                                <div className="flex justify-between"><span className="text-gray-400">Send to Back</span><kbd className="px-2 py-0.5 bg-gray-700 rounded">Ctrl+[</kbd></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -9787,6 +9971,84 @@
                                         <span className="w-4 text-center">↕️</span>
                                         <span>Flip Vertical</span>
                                         <span className="ml-auto text-xs text-gray-500">Shift+H</span>
+                                    </button>
+                                    <div className="border-t border-panel-border my-1"></div>
+                                    {/* Layer Ordering Options */}
+                                    <button
+                                        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex items-center gap-2"
+                                        onClick={() => {
+                                            if (contextMenu.elementType === 'snippet') setSnippets(prev => bringToFront(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'mask') setMasks(prev => bringToFront(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'infoPoint') setInfoPoints(prev => bringToFront(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'symbol') setSymbols(prev => bringToFront(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'measurement') setMeasurements(prev => bringToFront(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'bezier') setBezierCurves(prev => bringToFront(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'cloud') setCloudAnnotations(prev => bringToFront(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'leader') setLeaderLines(prev => bringToFront(prev, contextMenu.elementId));
+                                            else setElements(prev => bringToFront(prev, contextMenu.elementId));
+                                            setContextMenu(null);
+                                        }}
+                                    >
+                                        <span className="w-4 text-center">⬆️</span>
+                                        <span>Bring to Front</span>
+                                        <span className="ml-auto text-xs text-gray-500">Ctrl+]</span>
+                                    </button>
+                                    <button
+                                        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex items-center gap-2"
+                                        onClick={() => {
+                                            if (contextMenu.elementType === 'snippet') setSnippets(prev => bringForward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'mask') setMasks(prev => bringForward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'infoPoint') setInfoPoints(prev => bringForward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'symbol') setSymbols(prev => bringForward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'measurement') setMeasurements(prev => bringForward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'bezier') setBezierCurves(prev => bringForward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'cloud') setCloudAnnotations(prev => bringForward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'leader') setLeaderLines(prev => bringForward(prev, contextMenu.elementId));
+                                            else setElements(prev => bringForward(prev, contextMenu.elementId));
+                                            setContextMenu(null);
+                                        }}
+                                    >
+                                        <span className="w-4 text-center">↑</span>
+                                        <span>Bring Forward</span>
+                                        <span className="ml-auto text-xs text-gray-500">]</span>
+                                    </button>
+                                    <button
+                                        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex items-center gap-2"
+                                        onClick={() => {
+                                            if (contextMenu.elementType === 'snippet') setSnippets(prev => sendBackward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'mask') setMasks(prev => sendBackward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'infoPoint') setInfoPoints(prev => sendBackward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'symbol') setSymbols(prev => sendBackward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'measurement') setMeasurements(prev => sendBackward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'bezier') setBezierCurves(prev => sendBackward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'cloud') setCloudAnnotations(prev => sendBackward(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'leader') setLeaderLines(prev => sendBackward(prev, contextMenu.elementId));
+                                            else setElements(prev => sendBackward(prev, contextMenu.elementId));
+                                            setContextMenu(null);
+                                        }}
+                                    >
+                                        <span className="w-4 text-center">↓</span>
+                                        <span>Send Backward</span>
+                                        <span className="ml-auto text-xs text-gray-500">[</span>
+                                    </button>
+                                    <button
+                                        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex items-center gap-2"
+                                        onClick={() => {
+                                            if (contextMenu.elementType === 'snippet') setSnippets(prev => sendToBack(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'mask') setMasks(prev => sendToBack(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'infoPoint') setInfoPoints(prev => sendToBack(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'symbol') setSymbols(prev => sendToBack(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'measurement') setMeasurements(prev => sendToBack(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'bezier') setBezierCurves(prev => sendToBack(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'cloud') setCloudAnnotations(prev => sendToBack(prev, contextMenu.elementId));
+                                            else if (contextMenu.elementType === 'leader') setLeaderLines(prev => sendToBack(prev, contextMenu.elementId));
+                                            else setElements(prev => sendToBack(prev, contextMenu.elementId));
+                                            setContextMenu(null);
+                                        }}
+                                    >
+                                        <span className="w-4 text-center">⬇️</span>
+                                        <span>Send to Back</span>
+                                        <span className="ml-auto text-xs text-gray-500">Ctrl+[</span>
                                     </button>
                                     <div className="border-t border-panel-border my-1"></div>
                                     <button
